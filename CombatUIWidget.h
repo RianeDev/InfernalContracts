@@ -6,15 +6,17 @@
 #include "CardTypesHost.h"
 #include "HandManager.h"
 #include "CombatManager.h"
+#include "CardUIWidget.h" // Include for FCardDisplayData
 #include "CombatUIWidget.generated.h"
 
 // UI Event Delegates - Developers can bind to these however they want
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnUIHealthChanged, int32, CurrentHealth, int32, MaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnUIEnergyChanged, int32, CurrentEnergy, int32, MaxEnergy, FString, EnergyTypeName);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnUIEnemyChanged, FText, EnemyName, int32, EnemyHealth, int32, EnemyMaxHealth, UTexture2D*, EnemyPortrait);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnUIHandChanged, const TArray<FCardData>&, CurrentHand, int32, HandSize, int32, DeckSize);
+// Changed to use FCardDisplayData array instead of FCardData array
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnUIHandChanged, const TArray<FCardDisplayData>&, CurrentHandDisplay, int32, HandSize, int32, DeckSize);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnUICombatStateChanged, ECombatState, NewState, FString, StateDisplayText);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnUICardSlotChanged, int32, SlotIndex, const FCardData&, CardData, bool, bHasCard, bool, bCanPlay);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnUICardSlotChanged, int32, SlotIndex, const FCardDisplayData&, CardDisplayData, bool, bHasCard, bool, bCanPlay);
 
 UCLASS(BlueprintType, Blueprintable)
 class KEVESCARDKIT_API UCombatUIWidget : public UUserWidget
@@ -82,6 +84,10 @@ public:
     UFUNCTION(BlueprintPure, Category = "Combat UI")
     FCardData GetCardDataAtIndex(int32 HandIndex) const;
 
+    // New function to get FCardDisplayData for a specific hand index
+    UFUNCTION(BlueprintPure, Category = "Combat UI")
+    FCardDisplayData GetCardDisplayDataAtIndex(int32 HandIndex) const;
+
     UFUNCTION(BlueprintPure, Category = "Combat UI")
     float GetHealthPercent() const;
 
@@ -90,6 +96,19 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Combat UI")
     FString GetCombatStateDisplayText(ECombatState State) const;
+
+    // Utility functions for card display data creation
+    UFUNCTION(BlueprintPure, Category = "Combat UI")
+    FString GetCardTypeDisplayName(ECardType CardType) const;
+
+    UFUNCTION(BlueprintPure, Category = "Combat UI")
+    FString GetFactionDisplayName(ECardFaction Faction) const;
+
+    UFUNCTION(BlueprintPure, Category = "Combat UI")
+    FLinearColor GetFactionColor(ECardFaction Faction) const;
+
+    UFUNCTION(BlueprintPure, Category = "Combat UI")
+    bool ShouldShowAttackHealth(ECardType CardType) const;
 
 protected:
     // === EVENT HANDLERS - Listen to manager events and convert to UI events ===
@@ -116,4 +135,7 @@ private:
     void BroadcastEnemyUpdate();
     void BroadcastHandUpdate();
     void CheckCardPlayability();
+
+    // Helper function to create FCardDisplayData from FCardData
+    FCardDisplayData CreateCardDisplayData(const FCardData& CardData, int32 HandIndex, bool bIsPlayable) const;
 };

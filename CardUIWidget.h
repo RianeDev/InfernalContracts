@@ -80,7 +80,7 @@ protected:
 public:
     // === CARD DATA ===
 
-    UPROPERTY(BlueprintReadOnly, Category = "Card")
+    UPROPERTY(BlueprintReadWrite, Category = "Card")
     FCardDisplayData CurrentDisplayData;
 
     // === UI DATA EVENTS - These are what developers bind to ===
