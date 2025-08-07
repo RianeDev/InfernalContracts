@@ -9,9 +9,9 @@ ACombatManager::ACombatManager()
 {
     PrimaryActorTick.bCanEverTick = false;
 
-    // Default Life Crystal stats (persistent across combats)
-    LifeCrystalHealth = 20;
-    LifeCrystalMaxHealth = 20;
+    // Default Player Health stats (persistent across combats)
+    PlayerHealth = 20;
+    PlayerMaxHealth = 20;
 
     // Default energy per turn
     CurrentEnergy = 3;
@@ -52,6 +52,13 @@ void ACombatManager::StartCombat(const FEnemyData& Enemy, const TArray<int32>& P
         if (CombatUI)
         {
             CombatUI->AddToViewport();
+        }
+    }
+
+    if (CombatUI && HandManager) {
+        if (UCombatUIWidget* TypedCombatUI = Cast<UCombatUIWidget>(CombatUI))
+        {
+            TypedCombatUI->InitializeUI(this, HandManager);
         }
     }
 
@@ -118,8 +125,8 @@ void ACombatManager::EndPlayerTurn()
 
 void ACombatManager::DamagePlayer(int32 Damage)
 {
-    // In your game, damage goes to the Life Crystal, not a "player health"
-    DamageLifeCrystal(Damage);
+    // In your game, damage goes to the Player Health, not a "player health"
+    DamagePlayerHealth(Damage);
 }
 
 void ACombatManager::DamageEnemy(int32 Damage)
@@ -137,30 +144,30 @@ void ACombatManager::DamageEnemy(int32 Damage)
 
 void ACombatManager::HealPlayer(int32 Amount)
 {
-    // Healing affects the Life Crystal
-    HealLifeCrystal(Amount);
+    // Healing affects the Player Health
+    HealPlayerHealth(Amount);
 }
 
-void ACombatManager::DamageLifeCrystal(int32 Damage)
+void ACombatManager::DamagePlayerHealth(int32 Damage)
 {
     if (Damage <= 0) return;
 
-    LifeCrystalHealth = FMath::Max(0, LifeCrystalHealth - Damage);
-    OnHealthChanged.Broadcast(true, LifeCrystalHealth); // true = is player's life crystal
+    PlayerHealth = FMath::Max(0, PlayerHealth - Damage);
+    OnHealthChanged.Broadcast(true, PlayerHealth); // true = is player's Player Health
 
-    UE_LOG(LogTemp, Log, TEXT("[CombatManager] Life Crystal takes %d damage, health now %d"), Damage, LifeCrystalHealth);
+    UE_LOG(LogTemp, Log, TEXT("[CombatManager] Player Health takes %d damage, health now %d"), Damage, PlayerHealth);
 
     CheckWinConditions();
 }
 
-void ACombatManager::HealLifeCrystal(int32 Amount)
+void ACombatManager::HealPlayerHealth(int32 Amount)
 {
     if (Amount <= 0) return;
 
-    LifeCrystalHealth = FMath::Min(LifeCrystalMaxHealth, LifeCrystalHealth + Amount);
-    OnHealthChanged.Broadcast(true, LifeCrystalHealth);
+    PlayerHealth = FMath::Min(PlayerMaxHealth, PlayerHealth + Amount);
+    OnHealthChanged.Broadcast(true, PlayerHealth);
 
-    UE_LOG(LogTemp, Log, TEXT("[CombatManager] Life Crystal heals %d, health now %d"), Amount, LifeCrystalHealth);
+    UE_LOG(LogTemp, Log, TEXT("[CombatManager] Player Health heals %d, health now %d"), Amount, PlayerHealth);
 }
 
 void ACombatManager::SetPlayerEnergy(int32 NewEnergy)
@@ -195,9 +202,9 @@ void ACombatManager::ProcessEnemyTurn()
         return;
     }
 
-    // Simple AI: Enemy attacks Life Crystal or creatures
+    // Simple AI: Enemy attacks Player Health or creatures
     int32 EnemyDamage = FMath::RandRange(10, 20);
-    DamageLifeCrystal(EnemyDamage);
+    DamagePlayerHealth(EnemyDamage);
 
     // Check if combat should end
     CheckWinConditions();
@@ -215,9 +222,9 @@ void ACombatManager::ProcessEnemyTurn()
 
 void ACombatManager::CheckWinConditions()
 {
-    if (LifeCrystalHealth <= 0)
+    if (PlayerHealth <= 0)
     {
-        EndCombat(false); // Player lost - Life Crystal destroyed
+        EndCombat(false); // Player lost - Player Health destroyed
     }
     else if (CurrentEnemy.Health <= 0)
     {

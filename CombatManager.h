@@ -8,6 +8,8 @@
 #include "Blueprint/UserWidget.h"
 #include "CombatManager.generated.h"
 
+class UCombatUIWidget;
+
 UENUM(BlueprintType)
 enum class ECombatState : uint8
 {
@@ -62,12 +64,12 @@ public:
     UPROPERTY(BlueprintReadOnly, Category = "Combat")
     ECombatState CurrentState = ECombatState::None;
 
-    // Life Crystal Health (persistent across combats)
+    // Player Health Health (persistent across combats)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-    int32 LifeCrystalHealth = 20;
+    int32 PlayerHealth = 20;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-    int32 LifeCrystalMaxHealth = 20;
+    int32 PlayerMaxHealth = 20;
 
     // Energy per turn (3 by default, varies by faction)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
@@ -89,7 +91,7 @@ public:
 
     // UI References
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
-    TSubclassOf<UUserWidget> CombatUIClass;
+    TSubclassOf<UCombatUIWidget> CombatUIClass;
 
     UPROPERTY(BlueprintReadOnly, Category = "UI")
     UUserWidget* CombatUI;
@@ -122,10 +124,10 @@ public:
     void HealPlayer(int32 Amount);
 
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat", CallInEditor)
-    void DamageLifeCrystal(int32 Damage);
+    void DamagePlayerHealth(int32 Damage);
 
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat", CallInEditor)
-    void HealLifeCrystal(int32 Amount);
+    void HealPlayerHealth(int32 Amount);
 
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat", CallInEditor)
     void SetPlayerEnergy(int32 NewEnergy);
@@ -141,7 +143,7 @@ public:
     bool IsCombatActive() const { return CurrentState == ECombatState::PlayerTurn || CurrentState == ECombatState::EnemyTurn; }
 
     UFUNCTION(BlueprintPure, Category = "Infernal Contracts|Combat")
-    float GetLifeCrystalHealthPercent() const { return LifeCrystalMaxHealth > 0 ? (float)LifeCrystalHealth / LifeCrystalMaxHealth : 0.0f; }
+    float GetPlayerHealthPercent() const { return PlayerMaxHealth > 0 ? (float)PlayerHealth / PlayerMaxHealth : 0.0f; }
 
     UFUNCTION(BlueprintPure, Category = "Infernal Contracts|Combat")
     bool CanAffordCard(int32 CardCost) const { return CurrentEnergy >= CardCost; }
