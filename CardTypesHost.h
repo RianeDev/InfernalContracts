@@ -12,11 +12,10 @@ UENUM(BlueprintType)
 enum class ECardType : uint8
 {
     Creature     UMETA(DisplayName = "Creature"),
-    Magic        UMETA(DisplayName = "Magic"),
+    Spell        UMETA(DisplayName = "Spell"),
     Power        UMETA(DisplayName = "Power"),
     Skill        UMETA(DisplayName = "Skill"),
-    Status       UMETA(DisplayName = "Status"),
-    Curse        UMETA(DisplayName = "Curse")
+    Champion     UMETA(DisplayName = "Champion"),
 };
 
 UENUM(BlueprintType)
