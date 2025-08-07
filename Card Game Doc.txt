@@ -1,4 +1,7 @@
-﻿ID=
+﻿Card Template
+
+
+ID=
 Name=
 Desc=
 CardType=
@@ -15,10 +18,22 @@ CardCost=
 
 Card Types:
 
+
 Creature
 Spell
 Power
 Skill
+
+
+
+
+
+
+Card Decks
+
+
+
+
 
 
 3 Decks
@@ -31,6 +46,11 @@ Undead: Weaker creatures but lots of them, DOT based magic
 Angel: Middle power creatures with average cost. Healing magic.
 
 
+* Starter Champion Cards: Demon: Keves of Knives. ID=Whatever Name=Keves, Prince of Knives Desc=When Keves is played, add 3 Knife cards to your hand. CardType=Champion CardArt=Keves CardRarity=UltraRare CardAtk=4 CardHP=10 CardCost=0
+* * Undead: Peter Rasputin, Archlich ID=Whatever Name=Peter Rasputin, Archlich Desc=Whatever Peter is played, summon 2 Skeletal Warriors alongside him onto the field. CardType=Champion CardArt=Peter CardRarite=UltraRare CardAtk=2 CardHp=8 CardCost=0
+* * Angel Larial, Angelic Herald ID=Whatever Name= Larial, Angelic Herald Desc=Whenever Larial is played, all creatures on the field and in your hand gain +2 Life, +2 Atk. CardType=Champion CardArt=Larial CardRarity=UltraRare CardAtk=3 CardHP=7 CardCost=0
+* Creatures attack automatically when you end your turn. Some creatures deal more damage vs other types, deal damage more than once, or deal no damage and have another effect.
+Game Rules
 
 
 Energy: 3 per turn unless special circumstances dictate otherwise. 
@@ -39,25 +59,18 @@ Undead: Blight
 Angel: Light
 
 
-Turns: 3 energy per turn. You can spend that energy however you want per turn. No limit to the number of cards, only limited by energy. When you end your turn, you discard all cards in your hand.
+Turns: 3 energy per turn. You can spend that energy however you want per turn. No 
+limit to the number of cards, only limited by energy. When you end your turn, you discard all cards in your hand.
+* Life Crystal: Each game begins with your life crystal in the very back of your play field. It has 20 life per game (not per combat, per game) and if it reaches 0, this run ends.
+* Each player can have a maximum of 6 creatures out at any one time. If any creatures are on the field, creature attacks will attack those first, meaning any creatures present protects your Life Crystal.
+* Damage is NOT carried over in the event of overflow unless by special circumstance. (I.E. a creature with 5 life that takes 10 damage does not transfer 5 damage to the Life Crystal).
 
 
-* Starter Champion Cards: Demon: Keves of Knives. ID=Whatever Name=Keves, Prince of Knives Desc=When Keves is played, add 3 Knife cards to your hand. CardType=Champion CardArt=Keves CardRarity=UltraRare CardAtk=4 CardHP=10 CardCost=0
-* * Undead: Peter Rasputin, Archlich ID=Whatever Name=Peter Rasputin, Archlich Desc=Whatever Peter is played, summon 2 Skeletal Warriors alongside him onto the field. CardType=Champion CardArt=Peter CardRarite=UltraRare CardAtk=2 CardHp=8 CardCost=0
-* * Angel Larial, Angelic Herald ID=Whatever Name= Larial, Angelic Herald Desc=Whenever Larial is played, all creatures on the field and in your hand gain +2 Life, +2 Atk. CardType=Champion CardArt=Larial CardRarity=UltraRare CardAtk=3 CardHP=7 CardCost=0
-* Creatures attack automatically when you end your turn. Some creatures deal more damage vs other types, deal damage more than once, or deal no damage and have another effect.
-* * LIfe Crystal: Each game begins with your life crystal in the very back of your play field. It has 20 life per game (not per combat, per game) and if it reaches 0, this run ends.
-* * Each player can have a maximum of 6 creatures out at any one time. If any creatures are on the field, creature attacks will attack those first, meaning any creatures present protects your Life Crystal.
-* * Damage is NOT carried over in the event of overflow unless by special circumstance. (I.E. a creature with 5 life that takes 10 damage does not transfer 5 damage to the Life Crystal).
+Spells CANNOT BE CAST on the life crystal directly unless by special circumstance or card ability.
+* Cards will have an effect. Like with Keves, when he's played, you get 3 knife cards that do a thing.
 
 
-* Spells CANNOT BE CAST on the life crystal directly unless by special circumstance or card ability.
-* * Cards will have an effect. Like with Keves, when he's played, you get 3 knife cards that do a thing.
-
-
-* Some cards may have no effect at all.
-
-
+Some cards may have no effect at all.
 
 
 Your Champion DOES NOT count towards your maximum number of creatures. Creature Cards are neither exhausted or in the discard pile until they die, including your champion. When a creature dies, including your champion, they are added to the top of your discard pile like any other card and are shuffled back in like any other card. The only exception to this is your Champion costs 1 more energy each time they are summoned to bring back.
@@ -69,13 +82,36 @@ Armor is just extra health.
 Power cards are permanent per combat. 
 
 
+All cards, unless otherwise notated through special circumstances, are discarded on use. Please see individual cards for cost/effect. 
+
+
+Banish cards are exiled from that combat for the remainder of combat and are not shuffled back into the draw pile pile. Discard pile and banish pile are separate. Banish cards stay banished except in special circumstances. 
+
+
+Refresh cards are returned to your hand after they are played. Refresh 1 means it refreshes 1 time, refresh 2 refreshes twice, etc. 
+
+
+X+ cards indicate a variable. For example a card might say “Does X+1 where X is the number of energy used” or “Does X+1 damage where X is the number of the same card used”. 
+
+
+Preserve cards are not discarded from your hand when you end your turn. 
+
+
+Max Hand size: 7
+
+
+
+
+Return cards are cards that are put back onto the top of your draw pile when certain effects are met. Return 1 means it returns once, return 2 means it returns twice, etc. 
+
+
 Demon Cards
 
 
 ID=001
 Name=Keves of Knives
 Desc=When Keves is played, add 3 Knife cards to your hand. 
-CardType=DemonChampion
+CardType=Creature
 CardArt=Keves 
 CardRarity=UltraRare 
 CardAtk=4 
@@ -179,7 +215,7 @@ Angel Cards
 ID=003
 Name=Larial, Angelic Herald
 Desc=Whenever Larial is played, all creatures on the field and in your hand gain +2 Life, +2 Atk.
-CardType=AngelChampion
+CardType=Creature
 CardArt=Larial
 CardRarity=UltraRare
 CardAtk=3
@@ -212,7 +248,7 @@ CardCost=1
 ID=012
 Name=Seraphim Warrior
 Desc=Whenever Seraphim Warrior is played, they give your Champion 4 Armor. 
-CardType=Angel
+CardType=Creature
 CardArt=SeraphimWarrior
 CardRarity=Common
 CardAtk=3
@@ -223,7 +259,7 @@ CardCost=2
 ID=013
 Name=Archon
 Desc=Whenever Archon is played, heal your Life Crystal for 1. This functions only once per combat. 
-CardType=Angel
+CardType=Creature
 CardArt=Archon
 CardRarity=Rare
 CardAtk=1
@@ -283,7 +319,7 @@ Undead Cards
 ID=002
 Name=Peter Rasputin, Archlich
 Desc=Whatever Peter is played, summon 2 Skeletal Warriors alongside him onto the field.
-CardType=UndeadChampion
+CardType=Creature
 CardArt=Peter
 CardRarity=UltraRare
 CardAtk=2
