@@ -1,11 +1,6 @@
-// HandManager.cpp - Complete Implementation
 #include "HandManager.h"
 #include "CardActor.h"
 #include "Engine/World.h"
-#include "Components/PanelWidget.h"
-#include "Blueprint/UserWidget.h"
-#include "ICardWidget.h"
-#include "Engine/Engine.h"
 
 AHandManager::AHandManager()
 {
@@ -25,29 +20,28 @@ bool AHandManager::AddCardToHand(int32 CardID)
 {
     if (CurrentHand.Num() >= MaxHandSize)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[KCK HandManager] Hand is full! Cannot add card ID %d"), CardID);
+        UE_LOG(LogTemp, Warning, TEXT("[HandManager] Hand is full! Cannot add card ID %d"), CardID);
         return false;
     }
 
     FCardData* FoundCard = FindCardByID(CardID);
     if (!FoundCard)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[KCK HandManager] Card ID %d not found in CardDataTable"), CardID);
+        UE_LOG(LogTemp, Warning, TEXT("[HandManager] Card ID %d not found in CardDataTable"), CardID);
         return false;
     }
 
     // Add to hand
     CurrentHand.Add(*FoundCard);
-    int32 NewIndex = CurrentHand.Num() - 1;
 
-    // Create UI widget for the card
-    CreateCardWidget(*FoundCard, NewIndex);
+    // Broadcast individual card added event
+    OnCardAddedToHand.Broadcast(*FoundCard);
 
-    // Broadcast event
+    // Broadcast overall hand updated event
     OnHandUpdated.Broadcast(CurrentHand, CurrentHand.Num());
 
-    UE_LOG(LogTemp, Log, TEXT("[KCK HandManager] Added card '%s' to hand (Index: %d)"),
-        *FoundCard->Name.ToString(), NewIndex);
+    UE_LOG(LogTemp, Log, TEXT("[HandManager] Added card '%s' to hand (Total: %d cards)"),
+        *FoundCard->Name.ToString(), CurrentHand.Num());
 
     return true;
 }
@@ -56,64 +50,59 @@ bool AHandManager::RemoveCardFromHand(int32 HandIndex)
 {
     if (!CurrentHand.IsValidIndex(HandIndex))
     {
-        UE_LOG(LogTemp, Warning, TEXT("[KCK HandManager] Invalid hand index: %d"), HandIndex);
+        UE_LOG(LogTemp, Warning, TEXT("[HandManager] Invalid hand index: %d"), HandIndex);
         return false;
     }
 
     FCardData RemovedCard = CurrentHand[HandIndex];
     CurrentHand.RemoveAt(HandIndex);
 
-    // Destroy the UI widget
-    DestroyCardWidget(HandIndex);
+    // Broadcast individual card removed event
+    OnCardRemovedFromHand.Broadcast(RemovedCard, HandIndex);
 
-    // Refresh all widgets after this index (their indices shifted)
-    RefreshHandUI();
-
+    // Broadcast overall hand updated event
     OnHandUpdated.Broadcast(CurrentHand, CurrentHand.Num());
 
-    UE_LOG(LogTemp, Log, TEXT("[KCK HandManager] Removed card '%s' from hand"),
-        *RemovedCard.Name.ToString());
+    UE_LOG(LogTemp, Log, TEXT("[HandManager] Removed card '%s' from hand (Index: %d, Remaining: %d cards)"),
+        *RemovedCard.Name.ToString(), HandIndex, CurrentHand.Num());
 
     return true;
 }
 
 void AHandManager::ClearHand()
 {
+    int32 PreviousSize = CurrentHand.Num();
     CurrentHand.Empty();
 
-    // Clear all UI widgets
-    for (UUserWidget* Widget : HandWidgets)
-    {
-        if (Widget)
-        {
-            Widget->RemoveFromParent();
-        }
-    }
-    HandWidgets.Empty();
-
+    // Broadcast hand updated event
     OnHandUpdated.Broadcast(CurrentHand, 0);
-    UE_LOG(LogTemp, Log, TEXT("[KCK HandManager] Hand cleared"));
+
+    UE_LOG(LogTemp, Log, TEXT("[HandManager] Hand cleared (%d cards removed)"), PreviousSize);
 }
 
 void AHandManager::DrawStartingHand()
 {
     ClearHand();
     DrawCards(StartingHandSize);
+
+    UE_LOG(LogTemp, Log, TEXT("[HandManager] Drew starting hand of %d cards"), StartingHandSize);
 }
 
 void AHandManager::DrawCards(int32 Count)
 {
+    int32 CardsDrawn = 0;
+
     for (int32 i = 0; i < Count; i++)
     {
         if (PlayerDeck.Num() == 0)
         {
-            UE_LOG(LogTemp, Warning, TEXT("[KCK HandManager] Cannot draw card - deck is empty"));
+            UE_LOG(LogTemp, Warning, TEXT("[HandManager] Cannot draw card - deck is empty"));
             break;
         }
 
         if (CurrentHand.Num() >= MaxHandSize)
         {
-            UE_LOG(LogTemp, Warning, TEXT("[KCK HandManager] Cannot draw card - hand is full"));
+            UE_LOG(LogTemp, Warning, TEXT("[HandManager] Cannot draw card - hand is full"));
             break;
         }
 
@@ -122,10 +111,17 @@ void AHandManager::DrawCards(int32 Count)
         PlayerDeck.RemoveAt(0);
 
         CurrentHand.Add(DrawnCard);
-        CreateCardWidget(DrawnCard, CurrentHand.Num() - 1);
+        CardsDrawn++;
+
+        // Broadcast individual card added
+        OnCardAddedToHand.Broadcast(DrawnCard);
     }
 
+    // Broadcast overall hand update
     OnHandUpdated.Broadcast(CurrentHand, CurrentHand.Num());
+
+    UE_LOG(LogTemp, Log, TEXT("[HandManager] Drew %d cards (Hand: %d, Deck: %d)"),
+        CardsDrawn, CurrentHand.Num(), PlayerDeck.Num());
 }
 
 // ==== DECK MANAGEMENT ====
@@ -143,12 +139,12 @@ void AHandManager::SetPlayerDeck(const TArray<int32>& CardIDs)
         }
         else
         {
-            UE_LOG(LogTemp, Warning, TEXT("[KCK HandManager] Card ID %d not found when building deck"), CardID);
+            UE_LOG(LogTemp, Warning, TEXT("[HandManager] Card ID %d not found when building deck"), CardID);
         }
     }
 
     ShuffleDeck();
-    UE_LOG(LogTemp, Log, TEXT("[KCK HandManager] Player deck set with %d cards"), PlayerDeck.Num());
+    UE_LOG(LogTemp, Log, TEXT("[HandManager] Player deck set with %d cards"), PlayerDeck.Num());
 }
 
 void AHandManager::AddCardToDeck(int32 CardID)
@@ -157,7 +153,7 @@ void AHandManager::AddCardToDeck(int32 CardID)
     if (FoundCard)
     {
         PlayerDeck.Add(*FoundCard);
-        UE_LOG(LogTemp, Log, TEXT("[KCK HandManager] Added card '%s' to deck"), *FoundCard->Name.ToString());
+        UE_LOG(LogTemp, Log, TEXT("[HandManager] Added card '%s' to deck"), *FoundCard->Name.ToString());
     }
 }
 
@@ -169,36 +165,7 @@ void AHandManager::ShuffleDeck()
         int32 j = FMath::RandRange(0, i);
         PlayerDeck.Swap(i, j);
     }
-    UE_LOG(LogTemp, Log, TEXT("[KCK HandManager] Deck shuffled"));
-}
-
-// ==== UI MANAGEMENT ====
-
-void AHandManager::SetHandUIPanel(UPanelWidget* Panel)
-{
-    HandPanel = Panel;
-    RefreshHandUI();
-}
-
-void AHandManager::RefreshHandUI()
-{
-    if (!HandPanel || !CardWidgetClass) return;
-
-    // Clear existing widgets
-    for (UUserWidget* Widget : HandWidgets)
-    {
-        if (Widget)
-        {
-            Widget->RemoveFromParent();
-        }
-    }
-    HandWidgets.Empty();
-
-    // Create new widgets for current hand
-    for (int32 i = 0; i < CurrentHand.Num(); i++)
-    {
-        CreateCardWidget(CurrentHand[i], i);
-    }
+    UE_LOG(LogTemp, Log, TEXT("[HandManager] Deck shuffled"));
 }
 
 // ==== GAMEPLAY ====
@@ -207,10 +174,14 @@ bool AHandManager::PlayCard(int32 HandIndex, AActor* Target)
 {
     if (!CurrentHand.IsValidIndex(HandIndex))
     {
+        UE_LOG(LogTemp, Warning, TEXT("[HandManager] PlayCard: Invalid hand index %d"), HandIndex);
         return false;
     }
 
     FCardData PlayedCard = CurrentHand[HandIndex];
+
+    UE_LOG(LogTemp, Log, TEXT("[HandManager] Playing card: %s at index %d"),
+        *PlayedCard.Name.ToString(), HandIndex);
 
     // Create temporary card actor to execute ability
     if (CardActorClass)
@@ -224,11 +195,13 @@ bool AHandManager::PlayCard(int32 HandIndex, AActor* Target)
         }
     }
 
-    // Remove card from hand
+    // Remove card from hand (this will broadcast the removal automatically)
     RemoveCardFromHand(HandIndex);
 
-    // Broadcast event
+    // Broadcast card played event
     OnCardPlayed.Broadcast(PlayedCard);
+
+    UE_LOG(LogTemp, Log, TEXT("[HandManager] Successfully played card: %s"), *PlayedCard.Name.ToString());
 
     return true;
 }
@@ -244,15 +217,28 @@ FCardData AHandManager::GetCardInHand(int32 Index) const
     return FCardData(); // Return empty card data if invalid
 }
 
-bool AHandManager::CanPlayCard(int32 HandIndex, int32 CurrentMana) const
+bool AHandManager::CanPlayCard(int32 HandIndex, int32 CurrentEnergy) const
 {
     if (!CurrentHand.IsValidIndex(HandIndex))
     {
+        UE_LOG(LogTemp, VeryVerbose, TEXT("[HandManager] CanPlayCard: Invalid hand index %d"), HandIndex);
         return false;
     }
 
     const FCardData& Card = CurrentHand[HandIndex];
-    return Card.Cost <= CurrentMana;
+
+    // Champion cards (cost 0) should always be playable when combat allows
+    if (Card.CardType == ECardType::Champion && Card.Cost == 0)
+    {
+        return true;
+    }
+
+    bool bCanAfford = Card.Cost <= CurrentEnergy;
+
+    UE_LOG(LogTemp, VeryVerbose, TEXT("[HandManager] CanPlayCard: %s (Cost: %d, Available: %d) = %s"),
+        *Card.Name.ToString(), Card.Cost, CurrentEnergy, bCanAfford ? TEXT("Yes") : TEXT("No"));
+
+    return bCanAfford;
 }
 
 // ==== PRIVATE HELPER FUNCTIONS ====
@@ -270,37 +256,4 @@ FCardData* AHandManager::FindCardByID(int32 CardID)
         }
     }
     return nullptr;
-}
-
-void AHandManager::CreateCardWidget(const FCardData& CardData, int32 HandIndex)
-{
-    if (!HandPanel || !CardWidgetClass) return;
-
-    UUserWidget* CardWidget = CreateWidget<UUserWidget>(GetWorld(), CardWidgetClass);
-    if (CardWidget)
-    {
-        // Set card data on widget (via card interface)
-        if (CardWidget->GetClass()->ImplementsInterface(UCardWidget::StaticClass()))
-        {
-            ICardWidget::Execute_SetCardData(CardWidget, CardData, HandIndex);
-        }
-
-        HandPanel->AddChild(CardWidget);
-
-        // Ensure we have enough space in array
-        while (HandWidgets.Num() <= HandIndex)
-        {
-            HandWidgets.Add(nullptr);
-        }
-        HandWidgets[HandIndex] = CardWidget;
-    }
-}
-
-void AHandManager::DestroyCardWidget(int32 HandIndex)
-{
-    if (HandWidgets.IsValidIndex(HandIndex) && HandWidgets[HandIndex])
-    {
-        HandWidgets[HandIndex]->RemoveFromParent();
-        HandWidgets[HandIndex] = nullptr;
-    }
 }

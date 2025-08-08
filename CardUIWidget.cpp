@@ -1,4 +1,4 @@
-// CardUIWidget.cpp
+// CardUIWidget.cpp - Complete Implementation
 #include "CardUIWidget.h"
 
 UCardUIWidget::UCardUIWidget(const FObjectInitializer& ObjectInitializer)
@@ -18,7 +18,19 @@ void UCardUIWidget::InitializeCardWidget(const FCardData& CardData, int32 InHand
     CurrentDisplayData.CardData = CardData;
     CurrentDisplayData.HandIndex = InHandIndex;
 
+    // Default to playable when first initialized (this should help with your issue)
+    CurrentDisplayData.bIsPlayable = true;
+
     RefreshCardDisplayData();
+
+    // Call the interface function to update Blueprint implementation
+    if (GetClass()->ImplementsInterface(UCardWidget::StaticClass()))
+    {
+        ICardWidget::Execute_SetCardData(this, CurrentDisplayData);
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("[CardUI] Initialized card widget: %s at index %d (initially playable)"),
+        *CardData.Name.ToString(), InHandIndex);
 }
 
 void UCardUIWidget::UpdatePlayableState(bool bCanPlay)
@@ -27,6 +39,12 @@ void UCardUIWidget::UpdatePlayableState(bool bCanPlay)
     {
         CurrentDisplayData.bIsPlayable = bCanPlay;
         RefreshCardDisplayData();
+
+        // Call the interface function to update Blueprint implementation
+        if (GetClass()->ImplementsInterface(UCardWidget::StaticClass()))
+        {
+            ICardWidget::Execute_SetPlayable(this, bCanPlay);
+        }
 
         // Broadcast specific playability event
         OnCardPlayabilityChanged.Broadcast(CurrentDisplayData.HandIndex, bCanPlay);
@@ -40,6 +58,12 @@ void UCardUIWidget::UpdateHoverState(bool bIsHovered)
         CurrentDisplayData.bIsHovered = bIsHovered;
         RefreshCardDisplayData();
 
+        // Call the interface function to update Blueprint implementation
+        if (GetClass()->ImplementsInterface(UCardWidget::StaticClass()))
+        {
+            ICardWidget::Execute_SetHovered(this, bIsHovered);
+        }
+
         // Broadcast specific hover event
         OnCardHoverStateChanged.Broadcast(CurrentDisplayData.HandIndex, bIsHovered);
     }
@@ -51,6 +75,12 @@ void UCardUIWidget::UpdateSelectedState(bool bIsSelected)
     {
         CurrentDisplayData.bIsSelected = bIsSelected;
         RefreshCardDisplayData();
+
+        // Call the interface function to update Blueprint implementation
+        if (GetClass()->ImplementsInterface(UCardWidget::StaticClass()))
+        {
+            ICardWidget::Execute_SetSelected(this, bIsSelected);
+        }
     }
 }
 
@@ -69,14 +99,27 @@ void UCardUIWidget::RefreshCardDisplayData()
 
 void UCardUIWidget::RequestCardInteraction()
 {
+    // Add more detailed logging to help debug the issue
+    UE_LOG(LogTemp, Log, TEXT("[CardUI] RequestCardInteraction called for card: %s"),
+        *CurrentDisplayData.CardData.Name.ToString());
+    UE_LOG(LogTemp, Log, TEXT("[CardUI] - HandIndex: %d"), CurrentDisplayData.HandIndex);
+    UE_LOG(LogTemp, Log, TEXT("[CardUI] - bIsPlayable: %s"), CurrentDisplayData.bIsPlayable ? TEXT("true") : TEXT("false"));
+
     if (CurrentDisplayData.bIsPlayable && CurrentDisplayData.HandIndex >= 0)
     {
         OnCardInteractionRequested.Broadcast(CurrentDisplayData.HandIndex, CurrentDisplayData.CardData);
-        UE_LOG(LogTemp, Log, TEXT("[CardUI] Card interaction requested for: %s"), *CurrentDisplayData.CardData.Name.ToString());
+        UE_LOG(LogTemp, Log, TEXT("[CardUI] Card interaction broadcasted successfully"));
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("[CardUI] Cannot interact with card - not playable or invalid index"));
+        if (!CurrentDisplayData.bIsPlayable)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[CardUI] Cannot interact with card - not playable"));
+        }
+        if (CurrentDisplayData.HandIndex < 0)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[CardUI] Cannot interact with card - invalid hand index: %d"), CurrentDisplayData.HandIndex);
+        }
     }
 }
 
@@ -134,20 +177,58 @@ bool UCardUIWidget::ShouldShowAttackHealth(ECardType CardType) const
     return CardType == ECardType::Creature || CardType == ECardType::Champion;
 }
 
-void UCardUIWidget::SetCardData_Implementation(const FCardData& CardData, int32 InHandIndex)
+void UCardUIWidget::ForcePlayableState(bool bForcePlayable)
 {
-    InitializeCardWidget(CardData, InHandIndex);
+    UE_LOG(LogTemp, Log, TEXT("[CardUI] ForcePlayableState called: %s for card %s"),
+        bForcePlayable ? TEXT("Playable") : TEXT("Not Playable"),
+        *CurrentDisplayData.CardData.Name.ToString());
+
+    UpdatePlayableState(bForcePlayable);
+}
+
+// === INTERFACE IMPLEMENTATIONS ===
+
+void UCardUIWidget::SetCardData_Implementation(const FCardDisplayData& CardDisplayData)
+{
+    CurrentDisplayData = CardDisplayData;
+    RefreshCardDisplayData();
+
+    UE_LOG(LogTemp, Log, TEXT("[CardUI] SetCardData_Implementation called for: %s"),
+        *CardDisplayData.CardData.Name.ToString());
 }
 
 void UCardUIWidget::UpdateCardDisplay_Implementation()
 {
     RefreshCardDisplayData();
+
+    UE_LOG(LogTemp, VeryVerbose, TEXT("[CardUI] UpdateCardDisplay_Implementation called"));
 }
 
 void UCardUIWidget::SetPlayable_Implementation(bool bCanPlay)
 {
     UpdatePlayableState(bCanPlay);
+
+    UE_LOG(LogTemp, VeryVerbose, TEXT("[CardUI] SetPlayable_Implementation called: %s"),
+        bCanPlay ? TEXT("Playable") : TEXT("Not Playable"));
 }
+
+void UCardUIWidget::SetHovered_Implementation(bool bIsHovered)
+{
+    UpdateHoverState(bIsHovered);
+
+    UE_LOG(LogTemp, VeryVerbose, TEXT("[CardUI] SetHovered_Implementation called: %s"),
+        bIsHovered ? TEXT("Hovered") : TEXT("Not Hovered"));
+}
+
+void UCardUIWidget::SetSelected_Implementation(bool bIsSelected)
+{
+    UpdateSelectedState(bIsSelected);
+
+    UE_LOG(LogTemp, VeryVerbose, TEXT("[CardUI] SetSelected_Implementation called: %s"),
+        bIsSelected ? TEXT("Selected") : TEXT("Not Selected"));
+}
+
+// === HELPER FUNCTIONS ===
 
 FCardDisplayData UCardUIWidget::BuildDisplayData() const
 {

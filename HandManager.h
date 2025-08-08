@@ -1,18 +1,16 @@
-// HandManager.h - Enhanced Version
+// HandManager.h - Clean Data-Only Version
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "CardTypesHost.h"
 #include "CardActor.h"
-#include "Components/Widget.h"
-#include "Components/PanelWidget.h"
-#include "Blueprint/UserWidget.h"
-#include "Engine/World.h"
 #include "HandManager.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHandUpdated, const TArray<FCardData>&, CurrentHand, int32, HandSize);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCardPlayed, const FCardData&, PlayedCard);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCardAddedToHand, const FCardData&, AddedCard);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCardRemovedFromHand, const FCardData&, RemovedCard, int32, FormerIndex);
 
 UCLASS(BlueprintType, Blueprintable)
 class KEVESCARDKIT_API AHandManager : public AActor
@@ -26,7 +24,7 @@ protected:
     virtual void BeginPlay() override;
 
 public:
-    // Core Data
+    // === CORE DATA ===
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Card System")
     TSubclassOf<ACardActor> CardActorClass;
 
@@ -42,31 +40,27 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Card System")
     UDataTable* AbilityDataTable;
 
-    // Hand Management Settings
+    // === SETTINGS ===
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Settings")
     int32 MaxHandSize = 7;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Settings")
     int32 StartingHandSize = 5;
 
-    // UI Integration
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
-    TSubclassOf<UUserWidget> CardWidgetClass;
-
-    UPROPERTY(BlueprintReadOnly, Category = "UI")
-    TArray<UUserWidget*> HandWidgets;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
-    class UPanelWidget* HandPanel; // Reference to UI panel that holds cards
-
-    // Events
+    // === EVENTS ===
     UPROPERTY(BlueprintAssignable, Category = "Events")
     FOnHandUpdated OnHandUpdated;
 
     UPROPERTY(BlueprintAssignable, Category = "Events")
     FOnCardPlayed OnCardPlayed;
 
-    // ==== BLUEPRINT CALLABLE FUNCTIONS FOR DEVELOPERS ====
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnCardAddedToHand OnCardAddedToHand;
+
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnCardRemovedFromHand OnCardRemovedFromHand;
+
+    // === BLUEPRINT CALLABLE FUNCTIONS ===
 
     // Core Hand Management
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Hand", CallInEditor)
@@ -94,13 +88,6 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Deck", CallInEditor)
     void ShuffleDeck();
 
-    // UI Management
-    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|UI", CallInEditor)
-    void RefreshHandUI();
-
-    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|UI", CallInEditor)
-    void SetHandUIPanel(UPanelWidget* Panel);
-
     // Card Playing
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Gameplay", CallInEditor)
     bool PlayCard(int32 HandIndex, AActor* Target = nullptr);
@@ -116,12 +103,15 @@ public:
     FCardData GetCardInHand(int32 Index) const;
 
     UFUNCTION(BlueprintPure, Category = "Infernal Contracts|Info")
-    bool CanPlayCard(int32 HandIndex, int32 CurrentMana = 0) const;
+    bool CanPlayCard(int32 HandIndex, int32 CurrentEnergy = 0) const;
+
+    UFUNCTION(BlueprintPure, Category = "Infernal Contracts|Info")
+    bool IsHandFull() const { return CurrentHand.Num() >= MaxHandSize; }
+
+    UFUNCTION(BlueprintPure, Category = "Infernal Contracts|Info")
+    bool IsHandEmpty() const { return CurrentHand.Num() == 0; }
 
 private:
     // Internal helper functions
     FCardData* FindCardByID(int32 CardID);
-    void CreateCardWidget(const FCardData& CardData, int32 HandIndex);
-    void DestroyCardWidget(int32 HandIndex);
-    void UpdateCardWidget(int32 HandIndex);
 };

@@ -1,64 +1,12 @@
-// CardUIWidget.h
+// CardUIWidget.h - Updated to make CurrentDisplayData BlueprintReadWrite
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "ICardWidget.h"
 #include "CardTypesHost.h"
+#include "CardDisplayTypes.h"
 #include "CardUIWidget.generated.h"
-
-// Data structure for card UI updates
-USTRUCT(BlueprintType)
-struct FCardDisplayData
-{
-    GENERATED_BODY()
-
-    // Core Card Data
-    UPROPERTY(BlueprintReadOnly, Category = "Card Data")
-    FCardData CardData;
-
-    UPROPERTY(BlueprintReadOnly, Category = "Card Data")
-    int32 HandIndex = -1;
-
-    // Playability
-    UPROPERTY(BlueprintReadOnly, Category = "Card State")
-    bool bIsPlayable = true;
-
-    UPROPERTY(BlueprintReadOnly, Category = "Card State")
-    bool bIsHovered = false;
-
-    UPROPERTY(BlueprintReadOnly, Category = "Card State")
-    bool bIsSelected = false;
-
-    // Display Information
-    UPROPERTY(BlueprintReadOnly, Category = "Card Display")
-    FString CardTypeDisplayName = TEXT("");
-
-    UPROPERTY(BlueprintReadOnly, Category = "Card Display")
-    FString FactionDisplayName = TEXT("");
-
-    UPROPERTY(BlueprintReadOnly, Category = "Card Display")
-    FLinearColor CardBorderColor = FLinearColor::White;
-
-    UPROPERTY(BlueprintReadOnly, Category = "Card Display")
-    FLinearColor FactionColor = FLinearColor::White;
-
-    UPROPERTY(BlueprintReadOnly, Category = "Card Display")
-    bool bShouldShowAttackHealth = false;
-
-    UPROPERTY(BlueprintReadOnly, Category = "Card Display")
-    float DisplayOpacity = 1.0f;
-
-    // Formatted Text (for convenience)
-    UPROPERTY(BlueprintReadOnly, Category = "Card Display")
-    FString FormattedCostText = TEXT("0");
-
-    UPROPERTY(BlueprintReadOnly, Category = "Card Display")
-    FString FormattedAttackText = TEXT("0");
-
-    UPROPERTY(BlueprintReadOnly, Category = "Card Display")
-    FString FormattedHealthText = TEXT("0");
-};
 
 // Card UI Event Delegates - These are what developers will bind to
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCardDisplayDataUpdated, const FCardDisplayData&, CardDisplayData);
@@ -78,7 +26,7 @@ protected:
     virtual void NativeConstruct() override;
 
 public:
-    // === CARD DATA ===
+    // === CARD DATA === - Changed to BlueprintReadWrite as requested
 
     UPROPERTY(BlueprintReadWrite, Category = "Card")
     FCardDisplayData CurrentDisplayData;
@@ -144,11 +92,17 @@ public:
     UFUNCTION(BlueprintPure, Category = "Card UI Utils")
     bool ShouldShowAttackHealth(ECardType CardType) const;
 
+    // New function to force playable state (useful for debugging)
+    UFUNCTION(BlueprintCallable, Category = "Card UI Debug")
+    void ForcePlayableState(bool bForcePlayable);
+
 protected:
-    // Interface implementations (these call the data update system)
-    void SetCardData_Implementation(const FCardData& CardData, int32 InHandIndex);
-    void UpdateCardDisplay_Implementation();
-    void SetPlayable_Implementation(bool bCanPlay);
+    // Interface implementations - these provide default C++ behavior
+    virtual void SetCardData_Implementation(const FCardDisplayData& CardDisplayData) override;
+    virtual void UpdateCardDisplay_Implementation() override;
+    virtual void SetPlayable_Implementation(bool bCanPlay) override;
+    virtual void SetHovered_Implementation(bool bIsHovered) override;
+    virtual void SetSelected_Implementation(bool bIsSelected) override;
 
 private:
     // === HELPER FUNCTIONS ===

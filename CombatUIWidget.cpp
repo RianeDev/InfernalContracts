@@ -198,8 +198,40 @@ void UCombatUIWidget::OnManagerCombatStateChanged(ECombatState NewState)
     FString StateText = GetCombatStateDisplayText(NewState);
     OnUICombatStateChanged.Broadcast(NewState, StateText);
 
-    // Check card playability when combat state changes
-    CheckCardPlayability();
+    if (!HandManager || !CombatManager)
+        return;
+
+    // Combined playability + hand broadcast loop
+    TArray<FCardDisplayData> DisplayDataArray;
+    DisplayDataArray.Reserve(HandManager->GetHandSize());
+
+    for (int32 i = 0; i < HandManager->MaxHandSize; i++)
+    {
+        if (i < HandManager->GetHandSize())
+        {
+            FCardData CardData = HandManager->GetCardInHand(i);
+            bool bCanPlay = HandManager->CanPlayCard(i, CombatManager->CurrentEnergy)
+                && CombatManager->IsPlayerTurn();
+
+            FCardDisplayData DisplayData = CreateCardDisplayData(CardData, i, bCanPlay);
+            DisplayDataArray.Add(DisplayData);
+
+            // Keep slot update event firing for developers
+            OnUICardSlotChanged.Broadcast(i, DisplayData, true, bCanPlay);
+        }
+        else
+        {
+            FCardDisplayData EmptyDisplayData;
+            OnUICardSlotChanged.Broadcast(i, EmptyDisplayData, false, false);
+        }
+    }
+
+    // Broadcast full hand array once
+    OnUIHandChanged.Broadcast(
+        DisplayDataArray,
+        HandManager->GetHandSize(),
+        HandManager->GetDeckSize()
+    );
 }
 
 void UCombatUIWidget::OnManagerHealthChanged(bool bIsPlayer, int32 NewHealth)
@@ -229,6 +261,24 @@ void UCombatUIWidget::OnManagerCardPlayed(const FCardData& PlayedCard)
     UE_LOG(LogTemp, Log, TEXT("[CombatUI] Processed card played: %s"), *PlayedCard.Name.ToString());
 }
 
+void UCombatUIWidget::OnManagerCardAddedToHand(const FCardData& AddedCard)
+{
+    // Refresh hand UI when individual cards are added
+    BroadcastHandUpdate();
+    CheckCardPlayability();
+
+    UE_LOG(LogTemp, Log, TEXT("[CombatUI] Card added to hand: %s"), *AddedCard.Name.ToString());
+}
+
+void UCombatUIWidget::OnManagerCardRemovedFromHand(const FCardData& RemovedCard, int32 FormerIndex)
+{
+    // Refresh hand UI when individual cards are removed  
+    BroadcastHandUpdate();
+    CheckCardPlayability();
+
+    UE_LOG(LogTemp, Log, TEXT("[CombatUI] Card removed from hand: %s (was at index %d)"), *RemovedCard.Name.ToString(), FormerIndex);
+}
+
 void UCombatUIWidget::BindToManagers()
 {
     if (CombatManager)
@@ -241,6 +291,16 @@ void UCombatUIWidget::BindToManagers()
     {
         HandManager->OnHandUpdated.AddDynamic(this, &UCombatUIWidget::OnManagerHandUpdated);
         HandManager->OnCardPlayed.AddDynamic(this, &UCombatUIWidget::OnManagerCardPlayed);
+
+        // Bind to individual card events for more granular updates if needed
+        if (HandManager->OnCardAddedToHand.IsBound() == false)
+        {
+            HandManager->OnCardAddedToHand.AddDynamic(this, &UCombatUIWidget::OnManagerCardAddedToHand);
+        }
+        if (HandManager->OnCardRemovedFromHand.IsBound() == false)
+        {
+            HandManager->OnCardRemovedFromHand.AddDynamic(this, &UCombatUIWidget::OnManagerCardRemovedFromHand);
+        }
     }
 }
 
@@ -256,6 +316,8 @@ void UCombatUIWidget::UnbindFromManagers()
     {
         HandManager->OnHandUpdated.RemoveDynamic(this, &UCombatUIWidget::OnManagerHandUpdated);
         HandManager->OnCardPlayed.RemoveDynamic(this, &UCombatUIWidget::OnManagerCardPlayed);
+        HandManager->OnCardAddedToHand.RemoveDynamic(this, &UCombatUIWidget::OnManagerCardAddedToHand);
+        HandManager->OnCardRemovedFromHand.RemoveDynamic(this, &UCombatUIWidget::OnManagerCardRemovedFromHand);
     }
 }
 

@@ -125,6 +125,12 @@ protected:
     UFUNCTION()
     void OnManagerCardPlayed(const FCardData& PlayedCard);
 
+    UFUNCTION()
+    void OnManagerCardAddedToHand(const FCardData& AddedCard);
+
+    UFUNCTION()
+    void OnManagerCardRemovedFromHand(const FCardData& RemovedCard, int32 FormerIndex);
+
 private:
     // === HELPER FUNCTIONS ===
 

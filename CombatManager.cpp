@@ -24,6 +24,23 @@ void ACombatManager::BeginPlay()
     Super::BeginPlay();
 }
 
+void ACombatManager::SetCombatUI(UUserWidget* InCombatUI)
+{
+    CombatUI = InCombatUI;
+
+    if (CombatUI && HandManager)
+    {
+        if (UCombatUIWidget* TypedUI = Cast<UCombatUIWidget>(CombatUI))
+        {
+            TypedUI->InitializeUI(this, HandManager);
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[CombatManager] CombatUI set but HandManager is missing, will bind later"));
+    }
+}
+
 void ACombatManager::StartCombat(const FEnemyData& Enemy, const TArray<int32>& PlayerDeckIDs)
 {
     if (!HandManager)
@@ -35,7 +52,25 @@ void ACombatManager::StartCombat(const FEnemyData& Enemy, const TArray<int32>& P
     // Set up enemy
     CurrentEnemy = Enemy;
 
-    // Set up player deck and draw starting hand
+    // Ensure we have an existing CombatUI
+    if (!CombatUI)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[CombatManager] No existing CombatUI widget found! UI will not update."));
+    }
+    else
+    {
+        // Bind UI to managers BEFORE drawing cards so playability is calculated correctly
+        if (UCombatUIWidget* TypedCombatUI = Cast<UCombatUIWidget>(CombatUI))
+        {
+            TypedCombatUI->InitializeUI(this, HandManager);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[CombatManager] CombatUI is not of type UCombatUIWidget."));
+        }
+    }
+
+    // Set up player deck and draw starting hand (now UI is already listening if it exists)
     HandManager->SetPlayerDeck(PlayerDeckIDs);
     HandManager->DrawStartingHand();
 
@@ -45,27 +80,10 @@ void ACombatManager::StartCombat(const FEnemyData& Enemy, const TArray<int32>& P
         HandManager->OnCardPlayed.AddDynamic(this, &ACombatManager::OnCardPlayed);
     }
 
-    // Create combat UI
-    if (CombatUIClass && !CombatUI)
-    {
-        CombatUI = CreateWidget<UUserWidget>(GetWorld(), CombatUIClass);
-        if (CombatUI)
-        {
-            CombatUI->AddToViewport();
-        }
-    }
-
-    if (CombatUI && HandManager) {
-        if (UCombatUIWidget* TypedCombatUI = Cast<UCombatUIWidget>(CombatUI))
-        {
-            TypedCombatUI->InitializeUI(this, HandManager);
-        }
-    }
-
     // Set starting energy based on faction
     CurrentEnergy = MaxEnergyPerTurn;
 
-    // Start combat
+    // Start combat in "Starting" phase
     SetCombatState(ECombatState::Starting);
 
     // Brief delay then start player turn

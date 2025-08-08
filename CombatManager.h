@@ -105,6 +105,9 @@ public:
 
     // ==== BLUEPRINT CALLABLE FUNCTIONS FOR DEVELOPERS ====
 
+    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat")
+    void SetCombatUI(UUserWidget* InCombatUI);
+
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat", CallInEditor)
     void StartCombat(const FEnemyData& Enemy, const TArray<int32>& PlayerDeckIDs);
 
