@@ -1,25 +1,14 @@
-// CombatManager.h
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "CardTypesHost.h"
-#include "HandManager.h"
-#include "Blueprint/UserWidget.h"
+#include "CombatTypes.h"
 #include "CombatManager.generated.h"
 
+// Forward declarations to avoid circular dependencies
+class AHandManager;
 class UCombatUIWidget;
-
-UENUM(BlueprintType)
-enum class ECombatState : uint8
-{
-    None            UMETA(DisplayName = "None"),
-    Starting        UMETA(DisplayName = "Starting"),
-    PlayerTurn      UMETA(DisplayName = "Player Turn"),
-    EnemyTurn       UMETA(DisplayName = "Enemy Turn"),
-    Victory         UMETA(DisplayName = "Victory"),
-    Defeat          UMETA(DisplayName = "Defeat")
-};
 
 USTRUCT(BlueprintType)
 struct FEnemyData
@@ -87,14 +76,11 @@ public:
 
     // References
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "References")
-    AHandManager* HandManager;
+    class AHandManager* HandManager;
 
-    // UI References
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
-    TSubclassOf<UCombatUIWidget> CombatUIClass;
-
+    // UI References - Removed TSubclassOf to avoid circular dependency
     UPROPERTY(BlueprintReadOnly, Category = "UI")
-    UUserWidget* CombatUI;
+    class UUserWidget* CombatUI;
 
     // Events
     UPROPERTY(BlueprintAssignable, Category = "Events")
@@ -106,7 +92,7 @@ public:
     // ==== BLUEPRINT CALLABLE FUNCTIONS FOR DEVELOPERS ====
 
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat")
-    void SetCombatUI(UUserWidget* InCombatUI);
+    void SetCombatUI(class UUserWidget* InCombatUI);
 
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat", CallInEditor)
     void StartCombat(const FEnemyData& Enemy, const TArray<int32>& PlayerDeckIDs);

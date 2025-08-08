@@ -10,7 +10,6 @@
 
 // Card UI Event Delegates - These are what developers will bind to
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCardDisplayDataUpdated, const FCardDisplayData&, CardDisplayData);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCardInteractionRequested, int32, HandIndex, const FCardData&, CardData);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCardHoverStateChanged, int32, HandIndex, bool, bIsHovered);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCardPlayabilityChanged, int32, HandIndex, bool, bCanPlay);
 
@@ -36,8 +35,7 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "Card UI Events")
     FOnCardDisplayDataUpdated OnCardDisplayDataUpdated;
 
-    UPROPERTY(BlueprintAssignable, Category = "Card UI Events")
-    FOnCardInteractionRequested OnCardInteractionRequested;
+    // Note: CardUIWidget now calls HandManager directly instead of using events
 
     UPROPERTY(BlueprintAssignable, Category = "Card UI Events")
     FOnCardHoverStateChanged OnCardHoverStateChanged;
@@ -78,6 +76,10 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Card UI Actions")
     void RequestCardUnhover();
+
+    // Reference to HandManager for direct card playing
+    UPROPERTY(BlueprintReadWrite, Category = "Card UI")
+    class AHandManager* HandManager;
 
     // Utility functions for getting display information
     UFUNCTION(BlueprintPure, Category = "Card UI Utils")

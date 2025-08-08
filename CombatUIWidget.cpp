@@ -1,5 +1,7 @@
-// CombatUIWidget.cpp
 #include "CombatUIWidget.h"
+#include "CombatManager.h"
+#include "HandManager.h"
+#include "CardUIWidget.h"
 
 UCombatUIWidget::UCombatUIWidget(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
@@ -36,6 +38,10 @@ void UCombatUIWidget::InitializeUI(ACombatManager* InCombatManager, AHandManager
     UE_LOG(LogTemp, Log, TEXT("[CombatUI] Initialized with CombatManager and HandManager"));
 }
 
+// Registration system removed - CardUIWidgets now handle their own interactions directly
+
+// Registration system removed - CardUIWidgets now handle their own interactions directly
+
 void UCombatUIWidget::RefreshAllUI()
 {
     BroadcastHealthUpdate();
@@ -66,34 +72,49 @@ void UCombatUIWidget::RequestEndTurn()
 
 void UCombatUIWidget::RequestPlayCard(int32 HandIndex, AActor* Target)
 {
+    UE_LOG(LogTemp, Log, TEXT("[CombatUI] RequestPlayCard called with HandIndex: %d"), HandIndex);
+    
     if (!HandManager || !CombatManager)
     {
         UE_LOG(LogTemp, Warning, TEXT("[CombatUI] Cannot play card - missing managers"));
         return;
     }
 
+    UE_LOG(LogTemp, Log, TEXT("[CombatUI] Managers found - checking turn state"));
+    
     if (!IsPlayerTurn())
     {
         UE_LOG(LogTemp, Warning, TEXT("[CombatUI] Cannot play card - not player turn"));
         return;
     }
 
+    UE_LOG(LogTemp, Log, TEXT("[CombatUI] It's player turn - checking if card can be played"));
+    
     if (!CanPlayCardAtIndex(HandIndex))
     {
         UE_LOG(LogTemp, Warning, TEXT("[CombatUI] Cannot play card at index %d - insufficient energy or invalid card"), HandIndex);
         return;
     }
 
-    // Play the card
+    UE_LOG(LogTemp, Log, TEXT("[CombatUI] Card can be played - calling HandManager->PlayCard"));
+    
+    // Play the card - this will execute the ability!
     if (HandManager->PlayCard(HandIndex, Target))
     {
         UE_LOG(LogTemp, Log, TEXT("[CombatUI] Successfully requested play card at index %d"), HandIndex);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[CombatUI] Failed to play card at index %d"), HandIndex);
     }
 }
 
 bool UCombatUIWidget::CanPlayCardAtIndex(int32 HandIndex) const
 {
-    if (!HandManager || !CombatManager) return false;
+    if (!HandManager || !CombatManager) 
+    {
+        return false;
+    }
 
     return HandManager->CanPlayCard(HandIndex, CombatManager->CurrentEnergy);
 }
@@ -195,6 +216,8 @@ bool UCombatUIWidget::ShouldShowAttackHealth(ECardType CardType) const
 
 void UCombatUIWidget::OnManagerCombatStateChanged(ECombatState NewState)
 {
+    UE_LOG(LogTemp, Log, TEXT("[CombatUI] Combat state changed to: %d"), (int32)NewState);
+    
     FString StateText = GetCombatStateDisplayText(NewState);
     OnUICombatStateChanged.Broadcast(NewState, StateText);
 
@@ -212,6 +235,11 @@ void UCombatUIWidget::OnManagerCombatStateChanged(ECombatState NewState)
             FCardData CardData = HandManager->GetCardInHand(i);
             bool bCanPlay = HandManager->CanPlayCard(i, CombatManager->CurrentEnergy)
                 && CombatManager->IsPlayerTurn();
+
+            UE_LOG(LogTemp, Log, TEXT("[CombatUI] Card %d playability check - Energy: %d, IsPlayerTurn: %s, CanPlay: %s"), 
+                i, CombatManager->CurrentEnergy, 
+                CombatManager->IsPlayerTurn() ? TEXT("Yes") : TEXT("No"),
+                bCanPlay ? TEXT("Yes") : TEXT("No"));
 
             FCardDisplayData DisplayData = CreateCardDisplayData(CardData, i, bCanPlay);
             DisplayDataArray.Add(DisplayData);
@@ -279,6 +307,8 @@ void UCombatUIWidget::OnManagerCardRemovedFromHand(const FCardData& RemovedCard,
     UE_LOG(LogTemp, Log, TEXT("[CombatUI] Card removed from hand: %s (was at index %d)"), *RemovedCard.Name.ToString(), FormerIndex);
 }
 
+// Event handler removed - CardUIWidgets now handle their own interactions directly
+
 void UCombatUIWidget::BindToManagers()
 {
     if (CombatManager)
@@ -293,11 +323,11 @@ void UCombatUIWidget::BindToManagers()
         HandManager->OnCardPlayed.AddDynamic(this, &UCombatUIWidget::OnManagerCardPlayed);
 
         // Bind to individual card events for more granular updates if needed
-        if (HandManager->OnCardAddedToHand.IsBound() == false)
+        if (!HandManager->OnCardAddedToHand.IsBound())
         {
             HandManager->OnCardAddedToHand.AddDynamic(this, &UCombatUIWidget::OnManagerCardAddedToHand);
         }
-        if (HandManager->OnCardRemovedFromHand.IsBound() == false)
+        if (!HandManager->OnCardRemovedFromHand.IsBound())
         {
             HandManager->OnCardRemovedFromHand.AddDynamic(this, &UCombatUIWidget::OnManagerCardRemovedFromHand);
         }
@@ -320,6 +350,8 @@ void UCombatUIWidget::UnbindFromManagers()
         HandManager->OnCardRemovedFromHand.RemoveDynamic(this, &UCombatUIWidget::OnManagerCardRemovedFromHand);
     }
 }
+
+// Binding functions removed - CardUIWidgets now handle their own interactions directly
 
 void UCombatUIWidget::BroadcastHealthUpdate()
 {
@@ -387,24 +419,13 @@ void UCombatUIWidget::CheckCardPlayability()
 {
     if (!HandManager || !CombatManager) return;
 
-    // Broadcast data for all possible hand slots (up to max hand size)
-    // This lets developers show/hide card slots based on validity
-    for (int32 i = 0; i < HandManager->MaxHandSize; i++)
+    // Only broadcast for actual cards in hand, not all possible slots
+    for (int32 i = 0; i < HandManager->GetHandSize(); i++)
     {
-        if (i < HandManager->GetHandSize())
-        {
-            // Valid card slot - has card data
-            FCardData CardData = HandManager->GetCardInHand(i);
-            bool bCanPlay = CanPlayCardAtIndex(i) && IsPlayerTurn();
-            FCardDisplayData DisplayData = CreateCardDisplayData(CardData, i, bCanPlay);
-            OnUICardSlotChanged.Broadcast(i, DisplayData, true, bCanPlay);
-        }
-        else
-        {
-            // Empty card slot - broadcast empty data so developer can hide slot
-            FCardDisplayData EmptyDisplayData;
-            OnUICardSlotChanged.Broadcast(i, EmptyDisplayData, false, false);
-        }
+        FCardData CardData = HandManager->GetCardInHand(i);
+        bool bCanPlay = CanPlayCardAtIndex(i) && IsPlayerTurn();
+        FCardDisplayData DisplayData = CreateCardDisplayData(CardData, i, bCanPlay);
+        OnUICardSlotChanged.Broadcast(i, DisplayData, true, bCanPlay);
     }
 }
 

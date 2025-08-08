@@ -1,19 +1,21 @@
-// CombatUIWidget.h
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "CardTypesHost.h"
-#include "HandManager.h"
-#include "CombatManager.h"
-#include "CardUIWidget.h" // Include for FCardDisplayData
+#include "CardTypesHost.h" // For FCardData
+#include "CardDisplayTypes.h" // For FCardDisplayData
+#include "CombatTypes.h" // For ECombatState
 #include "CombatUIWidget.generated.h"
+
+// Forward declarations to avoid circular includes
+class ACombatManager;
+class AHandManager;
+class UCardUIWidget;
 
 // UI Event Delegates - Developers can bind to these however they want
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnUIHealthChanged, int32, CurrentHealth, int32, MaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnUIEnergyChanged, int32, CurrentEnergy, int32, MaxEnergy, FString, EnergyTypeName);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnUIEnemyChanged, FText, EnemyName, int32, EnemyHealth, int32, EnemyMaxHealth, UTexture2D*, EnemyPortrait);
-// Changed to use FCardDisplayData array instead of FCardData array
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnUIHandChanged, const TArray<FCardDisplayData>&, CurrentHandDisplay, int32, HandSize, int32, DeckSize);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnUICombatStateChanged, ECombatState, NewState, FString, StateDisplayText);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnUICardSlotChanged, int32, SlotIndex, const FCardDisplayData&, CardDisplayData, bool, bHasCard, bool, bCanPlay);
@@ -39,6 +41,9 @@ public:
     UPROPERTY(BlueprintReadWrite, Category = "Combat UI")
     class AHandManager* HandManager;
 
+    // === CARD UI WIDGET REFERENCES ===
+    // Note: CardUIWidgets now handle their own interactions directly
+
     // === UI EVENT DELEGATES - Bind to these in Blueprint ===
 
     UPROPERTY(BlueprintAssignable, Category = "UI Events")
@@ -62,10 +67,12 @@ public:
     // === BLUEPRINT CALLABLE FUNCTIONS ===
 
     UFUNCTION(BlueprintCallable, Category = "Combat UI")
-    void InitializeUI(ACombatManager* InCombatManager, AHandManager* InHandManager);
+    void InitializeUI(class ACombatManager* InCombatManager, class AHandManager* InHandManager);
 
     UFUNCTION(BlueprintCallable, Category = "Combat UI")
     void RefreshAllUI();
+
+    // Note: CardUIWidgets now handle their own interactions directly
 
     // Player Actions - Call these from your UI buttons/interactions
     UFUNCTION(BlueprintCallable, Category = "Combat UI")
@@ -84,7 +91,6 @@ public:
     UFUNCTION(BlueprintPure, Category = "Combat UI")
     FCardData GetCardDataAtIndex(int32 HandIndex) const;
 
-    // New function to get FCardDisplayData for a specific hand index
     UFUNCTION(BlueprintPure, Category = "Combat UI")
     FCardDisplayData GetCardDisplayDataAtIndex(int32 HandIndex) const;
 
@@ -131,11 +137,14 @@ protected:
     UFUNCTION()
     void OnManagerCardRemovedFromHand(const FCardData& RemovedCard, int32 FormerIndex);
 
+    // Note: CardUIWidgets now handle their own interactions directly
+
 private:
     // === HELPER FUNCTIONS ===
 
     void BindToManagers();
     void UnbindFromManagers();
+    // Note: CardUIWidgets now handle their own interactions directly
     void BroadcastHealthUpdate();
     void BroadcastEnergyUpdate();
     void BroadcastEnemyUpdate();

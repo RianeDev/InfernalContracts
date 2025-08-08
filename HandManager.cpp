@@ -1,12 +1,22 @@
 #include "HandManager.h"
 #include "CardActor.h"
 #include "Engine/World.h"
+#include "CombatManager.h"
 
 AHandManager::AHandManager()
 {
     PrimaryActorTick.bCanEverTick = false;
     MaxHandSize = 7;
     StartingHandSize = 5;
+    
+    // Set default CardActorClass
+    CardActorClass = ACardActor::StaticClass();
+}
+
+void AHandManager::SetCombatManager(ACombatManager* InCombatManager)
+{
+    CombatManager = InCombatManager;
+    UE_LOG(LogTemp, Log, TEXT("[HandManager] CombatManager reference set"));
 }
 
 void AHandManager::BeginPlay()
@@ -183,16 +193,40 @@ bool AHandManager::PlayCard(int32 HandIndex, AActor* Target)
     UE_LOG(LogTemp, Log, TEXT("[HandManager] Playing card: %s at index %d"),
         *PlayedCard.Name.ToString(), HandIndex);
 
-    // Create temporary card actor to execute ability
+    // Step 1: Deal damage if card has Attack > 0
+    if (PlayedCard.Attack > 0)
+    {
+        if (CombatManager)
+        {
+            UE_LOG(LogTemp, Log, TEXT("[HandManager] Card has %d Attack - dealing damage to enemy"), PlayedCard.Attack);
+            CombatManager->DamageEnemy(PlayedCard.Attack);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[HandManager] Cannot deal damage - CombatManager is null"));
+        }
+    }
+
+    // Step 2: Execute ability if card has one
     if (CardActorClass)
     {
+        UE_LOG(LogTemp, Log, TEXT("[HandManager] Creating CardActor for ability execution"));
         ACardActor* TempCardActor = GetWorld()->SpawnActor<ACardActor>(CardActorClass);
         if (TempCardActor)
         {
+            UE_LOG(LogTemp, Log, TEXT("[HandManager] CardActor created successfully"));
             TempCardActor->InitializeCard(PlayedCard, CardDataTable, AbilityDataTable);
             TempCardActor->ActivateAbility(Target);
             TempCardActor->Destroy();
         }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[HandManager] Failed to create CardActor"));
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[HandManager] No CardActorClass set - ability will not execute"));
     }
 
     // Remove card from hand (this will broadcast the removal automatically)

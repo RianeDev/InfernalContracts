@@ -1,5 +1,6 @@
 // CardUIWidget.cpp - Complete Implementation
 #include "CardUIWidget.h"
+#include "HandManager.h"
 
 UCardUIWidget::UCardUIWidget(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
@@ -107,8 +108,17 @@ void UCardUIWidget::RequestCardInteraction()
 
     if (CurrentDisplayData.bIsPlayable && CurrentDisplayData.HandIndex >= 0)
     {
-        OnCardInteractionRequested.Broadcast(CurrentDisplayData.HandIndex, CurrentDisplayData.CardData);
-        UE_LOG(LogTemp, Log, TEXT("[CardUI] Card interaction broadcasted successfully"));
+        // Call HandManager directly instead of broadcasting
+        if (HandManager)
+        {
+            UE_LOG(LogTemp, Log, TEXT("[CardUI] Calling HandManager->PlayCard directly"));
+            bool bSuccess = HandManager->PlayCard(CurrentDisplayData.HandIndex, nullptr);
+            UE_LOG(LogTemp, Log, TEXT("[CardUI] HandManager->PlayCard result: %s"), bSuccess ? TEXT("Success") : TEXT("Failed"));
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[CardUI] Cannot play card - HandManager is null"));
+        }
     }
     else
     {

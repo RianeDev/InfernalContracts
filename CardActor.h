@@ -1,47 +1,51 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+// CardActor.h - Card Actor for executing abilities
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "CardTypesHost.h"
+#include "Engine/DataTable.h"
 #include "CardActor.generated.h"
 
-UCLASS()
+UCLASS(BlueprintType, Blueprintable)
 class KEVESCARDKIT_API ACardActor : public AActor
 {
-	GENERATED_BODY()
-	
-public:	
-	// Sets default values for this actor's properties
-	ACardActor();
-	
-    // Called when the game starts or spawned
+    GENERATED_BODY()
+
+public:
+    ACardActor();
+
+protected:
     virtual void BeginPlay() override;
 
-    // Card Data
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Card")
+public:
+    // Card data this actor represents
+    UPROPERTY(BlueprintReadOnly, Category = "Card")
     FCardData CardData;
 
-    // Optional: Ability ID if you want to override CardData's
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Card")
-    int32 AbilityIDOverride = -1;
+    // Data table references
+    UPROPERTY(BlueprintReadWrite, Category = "Card")
+    UDataTable* CardDataTable;
 
-    // Optional: Ability table
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Card")
-    UDataTable* AbilityTable;
+    UPROPERTY(BlueprintReadWrite, Category = "Card")
+    UDataTable* AbilityDataTable;
 
-    // Optional: Card table (if we ever want card->card interaction)
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Card")
-    UDataTable* CardTable;
-
-    // Use ability
+    // Initialize the card actor with data
     UFUNCTION(BlueprintCallable, Category = "Card")
-    void ActivateAbility(AActor* Target);
+    void InitializeCard(const FCardData& InCardData, UDataTable* InCardDataTable, UDataTable* InAbilityDataTable);
 
-    // Useful when first populating
+    // Execute the card's ability
     UFUNCTION(BlueprintCallable, Category = "Card")
-    void InitializeCard(const FCardData& InData, UDataTable* InCardTable, UDataTable* InAbilityTable);
+    void ActivateAbility(AActor* Target = nullptr);
 
-	
+    // Get card data
+    UFUNCTION(BlueprintPure, Category = "Card")
+    FCardData GetCardData() const { return CardData; }
+
+private:
+    // Internal function to execute ability by ID
+    void ExecuteAbilityByID(int32 AbilityID, AActor* Target);
+
+    // Helper function to find ability data
+    FCardAbility* FindAbilityByID(int32 AbilityID);
 };

@@ -40,6 +40,10 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Card System")
     UDataTable* AbilityDataTable;
 
+    // Combat Manager reference for damage dealing
+    UPROPERTY(BlueprintReadWrite, Category = "Card System")
+    class ACombatManager* CombatManager;
+
     // === SETTINGS ===
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Settings")
     int32 MaxHandSize = 7;
@@ -91,6 +95,10 @@ public:
     // Card Playing
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Gameplay", CallInEditor)
     bool PlayCard(int32 HandIndex, AActor* Target = nullptr);
+
+    // Set Combat Manager reference
+    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Gameplay")
+    void SetCombatManager(class ACombatManager* InCombatManager);
 
     // Utility Functions
     UFUNCTION(BlueprintPure, Category = "Infernal Contracts|Info")

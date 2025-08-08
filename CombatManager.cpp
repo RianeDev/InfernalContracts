@@ -1,7 +1,7 @@
-// CombatManager.cpp
 #include "CombatManager.h"
 #include "HandManager.h"
 #include "Blueprint/UserWidget.h"
+#include "CombatUIWidget.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
 
@@ -73,6 +73,9 @@ void ACombatManager::StartCombat(const FEnemyData& Enemy, const TArray<int32>& P
     // Set up player deck and draw starting hand (now UI is already listening if it exists)
     HandManager->SetPlayerDeck(PlayerDeckIDs);
     HandManager->DrawStartingHand();
+    
+    // Set up cross-references between managers
+    HandManager->SetCombatManager(this);
 
     // Bind to hand manager events
     if (!HandManager->OnCardPlayed.IsBound())
@@ -127,8 +130,18 @@ void ACombatManager::EndPlayerTurn()
     if (HandManager)
     {
         HandManager->ClearHand();
-        // Draw new hand (typically 5 cards, but this could be configurable)
-        HandManager->DrawCards(HandManager->StartingHandSize);
+        
+        // Check if deck has cards before shuffling and drawing
+        if (HandManager->GetDeckSize() > 0)
+        {
+            // Shuffle deck and draw new hand for next turn
+            HandManager->ShuffleDeck();
+            HandManager->DrawCards(HandManager->StartingHandSize);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[CombatManager] Cannot draw new hand - deck is empty"));
+        }
     }
 
     // Reset energy for next turn  
