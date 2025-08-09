@@ -1,0 +1,338 @@
+Card Template
+ID=
+Name=
+Desc=
+CardType=
+CardArt=
+CardRarity=
+CardAtk=
+CardHP=
+CardCost=
+
+Card Types:
+Creature
+Spell
+Power
+Skill
+
+
+
+
+
+
+Card Decks
+3 Decks
+Demon
+Angel
+Undead
+
+Demon: Strong creatures but expensive with damage based magic. 
+Undead: Weaker creatures but lots of them, DOT based magic 
+Angel: Middle power creatures with average cost. Healing magic.
+
+
+* Starter Champion Cards: Demon: Keves of Knives. ID=Whatever Name=Keves, Prince of Knives Desc=When Keves is played, add 3 Knife cards to your hand. CardType=Champion CardArt=Keves CardRarity=UltraRare CardAtk=4 CardHP=10 CardCost=0
+* * Undead: Peter Rasputin, Archlich ID=Whatever Name=Peter Rasputin, Archlich Desc=Whatever Peter is played, summon 2 Skeletal Warriors alongside him onto the field. CardType=Champion CardArt=Peter CardRarite=UltraRare CardAtk=2 CardHp=8 CardCost=0
+* * Angel Larial, Angelic Herald ID=Whatever Name= Larial, Angelic Herald Desc=Whenever Larial is played, all creatures on the field and in your hand gain +2 Life, +2 Atk. CardType=Champion CardArt=Larial CardRarity=UltraRare CardAtk=3 CardHP=7 CardCost=0
+* Creatures attack automatically when you end your turn. Some creatures deal more damage vs other types, deal damage more than once, or deal no damage and have another effect.
+Game Rules
+
+
+Energy: 3 per turn unless special circumstances dictate otherwise. 
+Demons: Souls 
+Undead: Blight 
+Angel: Light
+
+
+Turns: 3 energy per turn. You can spend that energy however you want per turn. No 
+limit to the number of cards, only limited by energy. When you end your turn, you discard all cards in your hand.
+
+
+At the start of your turn, you draw 5 cards. You start each combat with your champion card in your hand. 
+* Life Crystal: Each game begins with your life crystal in the very back of your play field. It has 20 life per game (not per combat, per game) and if it reaches 0, this run ends.
+* Each player can have a maximum of 6 creatures out at any one time. If any creatures are on the field, creature attacks will attack those first, meaning any creatures present protects your Life Crystal.
+* Damage is NOT carried over in the event of overflow unless by special circumstance. (I.E. a creature with 5 life that takes 10 damage does not transfer 5 damage to the Life Crystal).
+
+
+Spells CANNOT BE CAST on the life crystal directly unless by special circumstance or card ability.
+* Cards will have an effect. Like with Keves, when he's played, you get 3 knife cards that do a thing.
+
+
+Some cards may have no effect at all.
+
+Your Champion DOES NOT count towards your maximum number of creatures. Creature Cards are neither exhausted or in the discard pile until they die, including your champion. When a creature dies, 
+including your champion, they are added to the top of your discard pile like any other card and are shuffled back in like any other card. The only exception to this is your Champion costs 1 more energy each time they are summoned to bring back.
+Armor is just extra health. 
+Power cards are permanent per combat. 
+All cards, unless otherwise notated through special circumstances, are discarded on use. Please see individual cards for cost/effect. 
+Banish cards are exiled from that combat for the remainder of combat and are not shuffled back into the draw pile pile. Discard pile and banish pile are separate. Banish cards stay banished except in special circumstances. 
+Refresh cards are returned to your hand after they are played. Refresh 1 means it refreshes 1 time, refresh 2 refreshes twice, etc. 
+X+ cards indicate a variable. For example a card might say “Does X+1 where X is the number of energy used” or “Does X+1 damage where X is the number of the same card used”. 
+Preserve cards are not discarded from your hand when you end your turn. 
+
+Max Hand size: 15
+Return cards are cards that are put back onto the top of your draw pile when certain effects are met. Return 1 means it returns once, return 2 means it returns twice, etc. 
+Creature cards obey special rules when it comes to discarding them. Creatures on the field ‘occupy’ that card while the creature is alive and do not go into the discarded pile until the creature is killed. Only when the creature is killed do the creature cards become discarded. Normal rules for shuffling discarded cards apply thusly. 
+
+
+Demon Starting Deck
+Keves of Knives
+Fireballx1
+Fissurex1
+Sparkx1
+Horned Demonx2
+Goat Demonx1
+Hellhoundx1
+Dance of Knivesx1
+Bloodlustx1
+
+
+Demon Cards
+ID=001
+Name=Keves of Knives
+Desc=When Keves is played, add 3 Knife cards to your hand. 
+CardType=Creature
+CardArt=Keves 
+CardRarity=UltraRare 
+CardAtk=4 
+CardHP=10 
+CardCost=0
+
+ID=004
+Name=Knife
+Desc=Deals 1 damage. If your opponent has no creatures out, this can be used on the opponent's Life Crystal. Banish. 
+CardType=Spell
+CardArt=Knife
+CardRarity=Common
+CardAtk=N/A
+CardHP=N/A
+CardCost=0
+
+
+ID=005
+Name=Fireball
+Desc=Deals 3 damage to all of your opponent's creatures
+CardType=Spell
+CardArt=Fireball
+CardRarity=Common
+CardAtk=N/A
+CardHP=N/A
+CardCost=2
+
+
+ID=006
+Name=Goat Demon
+Desc=When Goat Demon is played, apply 1 armor to your champion. 
+CardType=Creature
+CardArt=GoatDemon
+CardRarity=Common
+CardAtk=2
+CardHP=3
+CardCost=1
+
+
+ID=007
+Name=Horned Demon
+Desc=N/A
+CardType=Creature
+CardArt=HornedDemon
+CardRarity=Common
+CardAtk=2
+CardHP=2
+CardCost=1
+
+
+ID=008
+Name=Bloodlust
+Desc=Grants a creature +2 HP and +2 Atk. 
+CardType=Power
+CardArt=Bloodlust
+CardRarity=Uncommon
+CardAtk=N/A
+CardHP=N/A
+CardCost=1
+
+
+ID=009
+Name=Dance of Knives
+Desc=Add 3 Knife cards to your hand.
+CardType=Skill
+CardArt=DanceOfKnives
+CardRarity=Common
+CardAtk=N/A
+CardHP=N/A
+CardCost=1
+
+
+ID=010
+Name=Dark Trade
+Desc=Whenever a card is Banished, you draw a card. 
+CardType=Power
+CardArt=DarkTrade
+CardRarity=Uncommon
+CardAtk=N/A
+CardHP=N/A
+CardCost=2
+
+
+ID=011
+Name=Infernal Pact
+Desc=Banish 1 card, draw 2 cards. 
+CardType=Skill
+CardArt=InfernalPact
+CardRarity=Rare
+CardAtk=N/A
+CardHP=N/A
+CardCost=1
+
+
+ID=020
+Name=Fissure
+Desc=Deals 3 damage to a random opponent’s creature. 
+CardType=Spell
+CardArt=Fissure
+CardRarity=Common
+CardAtk=N/A
+CardHP=N/A
+CardCost=2
+
+
+ID=021
+Name=Spark
+Desc=Deals 1 damage to target creature. Create a duplicate of Spark to add to your draw pile. This card is still discarded as normal. 
+CardType=Spell
+CardArt=Spark
+CardRarity=Common
+CardAtk=N/A
+CardHP=N/A
+CardCost=0
+
+
+ID=022
+Name=Hellhound
+Desc=Hellhound deals 1 damage to all opponent’s creatures at the start if your turn. 
+CardType=Creature
+CardArt=Hellhound
+CardRarity=Common
+CardAtk=0
+CardHP=2
+CardCost=1
+
+
+
+
+
+
+
+
+
+
+Angel Cards
+
+
+ID=003
+Name=Larial, Angelic Herald
+Desc=Whenever Larial is played, all creatures on the field and in your hand gain +2 Life, +2 Atk.
+CardType=Creature
+CardArt=Larial
+CardRarity=UltraRare
+CardAtk=3
+CardHP=7
+CardCost=0
+
+
+ID=014
+Name=Shield of Faith
+Desc=When played on a creature, give them 4 Armor. 
+CardType=Spell
+CardArt=ShieldofFaith
+CardRarity=Common
+CardAtk=N/A
+CardHP=N/A
+CardCost=1
+
+
+ID=015
+Name=Holy Light
+Desc=Heals a creature for 2. 
+CardType=Spell
+CardArt=HolyLight
+CardRarity=Common
+CardAtk=N/A        
+CardHP=N/A        
+CardCost=1
+
+
+ID=012
+Name=Seraphim Warrior
+Desc=Whenever Seraphim Warrior is played, they give your Champion 4 Armor. 
+CardType=Creature
+CardArt=SeraphimWarrior
+CardRarity=Common
+CardAtk=3
+CardHP=2
+CardCost=2
+
+
+ID=013
+Name=Archon
+Desc=Whenever Archon is played, heal your Life Crystal for 1. This functions only once per combat. 
+CardType=Creature
+CardArt=Archon
+CardRarity=Rare
+CardAtk=1
+CardHP=1
+CardCost=2
+
+
+ID=016
+Name=Regenerate
+Desc=Each turn, all creatures heal 1. 
+CardType=Power
+CardArt=Regenerate
+CardRarity=Uncommon
+CardAtk=N/A
+CardHP=N/A
+CardCost=2
+
+
+ID=017
+Name=Angelic Bulwark
+Desc=All creatures gain Armor 1
+CardType=Skill
+CardArt=AngelicBulWark
+CardRarity=Rare
+CardAtk=N/A
+CardHP=N/A
+CardCost=2
+
+ID=018
+Name=Litany of War
+Desc=At the start of your turn, your Champion (if they are on the field) gain HP+1/ATK+1. 
+CardType=Power
+CardArt=LitanyOfWar
+CardRarity=Rare
+CardAtk=N/A
+CardHP=N/A
+CardCost=3
+
+ID=019
+Name=Holy Power
+Desc=Gain 2 Light, draw 1 card. Banish. 
+CardType=Skill
+CardArt=HolyPower
+CardRarity=Rare
+CardAtk=N/A
+CardHP=N/A        
+CardCost=0
+
+Undead Cards
+ID=002
+Name=Peter Rasputin, Archlich
+Desc=Whatever Peter is played, summon 2 Skeletal Warriors alongside him onto the field.
+CardType=Creature
+CardArt=Peter
+CardRarity=UltraRare
+CardAtk=2
+CardHP=8
+CardCost=0
