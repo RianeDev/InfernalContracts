@@ -28,11 +28,18 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Card System")
     TSubclassOf<ACardActor> CardActorClass;
 
-    UPROPERTY(BlueprintReadOnly, Category = "Card System")
+    UPROPERTY(BlueprintReadWrite, Category = "Card System")
     TArray<FCardData> CurrentHand;
 
-    UPROPERTY(BlueprintReadOnly, Category = "Card System")
+    UPROPERTY(BlueprintReadWrite, Category = "Card System")
     TArray<FCardData> PlayerDeck;
+
+    // A collection of the UniqueIDs of discarded cards.
+    UPROPERTY(BlueprintReadWrite, Category = "Card System")
+    TArray<int32> DiscardPileCardIDs;
+
+    UPROPERTY(BlueprintReadWrite, Category = "Card System")
+    TArray<int32> BanishedCardIDs;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Card System")
     UDataTable* CardDataTable;
@@ -91,6 +98,22 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Deck", CallInEditor)
     void ShuffleDeck();
+
+    // Discard and Banish
+    UFUNCTION(BlueprintCallable, Category = "Card System")
+    void AddCardToDiscard(int32 CardID);
+
+    UFUNCTION(BlueprintCallable, Category = "Card System")
+    void ClearDiscardPile();
+
+    UFUNCTION(BlueprintCallable, Category = "Card System")
+    void ShuffleDiscardIntoDeck();
+
+    UFUNCTION(BlueprintCallable, Category = "Card System")
+    void RemoveCardFromAllPilesByCardID(int32 CardID);
+
+    UFUNCTION(BlueprintCallable, Category = "Card System")
+    void BanishCardByID(int32 CardID);
 
     // Card Playing
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Gameplay", CallInEditor)

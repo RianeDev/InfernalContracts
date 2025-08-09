@@ -4,6 +4,7 @@
 #include "GameFramework/Actor.h"
 #include "CardTypesHost.h"
 #include "CombatTypes.h"
+#include "EnemyAIComponent.h"
 #include "CombatManager.generated.h"
 
 // Forward declarations to avoid circular dependencies
@@ -28,12 +29,27 @@ struct FBattlefieldCard
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     bool bIsPlayerOwned = true;
 
+    // Unique identifier that never changes (used for targeting)
+    UPROPERTY(BlueprintReadOnly)
+    int32 UniqueID = -1;
+
+    // Current array index (can change when cards are removed)
+    UPROPERTY(BlueprintReadOnly)
+    int32 BattlefieldIndex = -1;
+
+    // Optional reference to the visual actor (if using BattlefieldCardActor)
+    UPROPERTY(BlueprintReadWrite)
+    class ABattlefieldCardActor* VisualActor = nullptr;
+
     FBattlefieldCard()
     {
         CardData = FCardData();
         CurrentHealth = 0;
         CurrentAttack = 0;
         bIsPlayerOwned = true;
+        UniqueID = -1;
+        BattlefieldIndex = -1;
+        VisualActor = nullptr;
     }
 
     FBattlefieldCard(const FCardData& InCardData, bool bPlayerOwned)
@@ -42,6 +58,9 @@ struct FBattlefieldCard
         CurrentHealth = InCardData.Health;
         CurrentAttack = InCardData.Attack;
         bIsPlayerOwned = bPlayerOwned;
+        UniqueID = -1; // Will be set when added to battlefield
+        BattlefieldIndex = -1;
+        VisualActor = nullptr;
     }
 };
 
@@ -52,6 +71,9 @@ struct FEnemyData
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FText Name;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    AActor* ActorReference;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     int32 Health = 100;
@@ -74,7 +96,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthChanged, bool, bIsPlayer, 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnCreatureSummoned, const FBattlefieldCard&, Card, int32, Index, bool, bPlayerOwned);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCreatureRemoved, int32, Index, bool, bPlayerOwned);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnCardDamaged, int32, BattlefieldIndex, int32, DamageAmount, bool, bIsPlayerSide);
-
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCardDamagedByUniqueID, int32, UniqueID, int32, DamageAmount);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnCardBanishedSignature, const FCardData&, Card, bool, bWasSummoned, int32, UniqueID);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnCardDiscardedSignature, const FCardData&, Card, bool, bWasSummoned, int32, UniqueID);
 
 UCLASS(BlueprintType, Blueprintable)
 class KEVESCARDKIT_API ACombatManager : public AActor
@@ -99,10 +123,11 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
     int32 PlayerMaxHealth = 20;
 
-    // Energy per turn (3 by default, varies by faction)
+    // Player Energy per turn (3 by default, varies by faction)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
     int32 CurrentEnergy = 3;
 
+    //Player energy
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
     int32 MaxEnergyPerTurn = 3;
 
@@ -112,6 +137,9 @@ public:
 
     UPROPERTY(BlueprintReadOnly, Category = "Combat")
     FEnemyData CurrentEnemy;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Combat")
+    AActor* EnemyActor;
 
     // Battlefield - Cards currently in play
     UPROPERTY(BlueprintReadOnly, Category = "Combat")
@@ -125,6 +153,15 @@ public:
 
     UPROPERTY(BlueprintAssignable, Category = "Combat")
     FOnCardDamaged OnCardDamaged;
+
+    UPROPERTY(BlueprintAssignable, Category = "Combat")
+    FOnCardDamagedByUniqueID OnCardDamagedByUniqueID;
+
+    UPROPERTY(BlueprintAssignable, Category = "Combat")
+    FOnCardBanishedSignature OnCardBanished;
+
+    UPROPERTY(BlueprintAssignable, Category = "Combat")
+    FOnCardDiscardedSignature OnCardDiscarded;
 
     // References
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "References")
@@ -141,7 +178,6 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "Events")
     FOnHealthChanged OnHealthChanged;
 
-
     UPROPERTY(BlueprintAssignable, Category = "Combat|Events")
     FOnCreatureSummoned OnCreatureSummoned;
 
@@ -149,6 +185,18 @@ public:
     FOnCreatureRemoved OnCreatureRemoved;
 
     // ==== BLUEPRINT CALLABLE FUNCTIONS FOR DEVELOPERS ====
+
+    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat")
+    int32 GetEnemyCurrentEnergy() const
+    {
+        return EnemyAIComponent ? EnemyAIComponent->GetCurrentEnergy() : 0;
+    }
+
+    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat")
+    int32 GetEnemyMaxEnergy() const
+    {
+        return EnemyAIComponent ? EnemyAIComponent->GetMaxEnergy() : 0;
+    }
 
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat")
     void SetCombatUI(class UUserWidget* InCombatUI);
@@ -164,19 +212,7 @@ public:
 
     // Enhanced damage functions that target battlefield cards first
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat", CallInEditor)
-    void DamagePlayer(int32 Damage);
-
-    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat", CallInEditor)
-    void DamageEnemy(int32 Damage);
-
-    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat", CallInEditor)
-    void HealPlayer(int32 Amount);
-
-    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat", CallInEditor)
-    void DamagePlayerHealth(int32 Damage);
-
-    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat", CallInEditor)
-    void HealPlayerHealth(int32 Amount);
+    void ModifyPlayerHealth(int32 HealthDelta);
 
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat", CallInEditor)
     void SetPlayerEnergy(int32 NewEnergy);
@@ -191,8 +227,25 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat", CallInEditor)
     void RemoveCardFromBattlefield(int32 BattlefieldIndex, bool bIsPlayerSide = true);
 
+    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat")
+    void BanishCard(const FCardData& CardToBanish);
+
+    // Searches battlefield cards by CardID
+    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat")
+    int32 FindUniqueIDByCardID(int32 CardID, bool bIsPlayerSide) const;
+
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat", CallInEditor)
     bool DamageSpecificBattlefieldCard(int32 BattlefieldIndex, bool bIsPlayerSide, int32 Damage);
+
+    // NEW: Unique ID based functions
+    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat")
+    bool DamageBattlefieldCardByUniqueID(int32 UniqueID, int32 Damage);
+
+    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat")
+    FBattlefieldCard GetBattlefieldCardByUniqueID(int32 UniqueID, bool& bFound) const;
+
+    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat")
+    bool RemoveBattlefieldCardByUniqueID(int32 UniqueID);
 
     // Utility Functions
     UFUNCTION(BlueprintPure, Category = "Infernal Contracts|Combat")
@@ -237,13 +290,37 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat")
     void OnCardPlayed(const FCardData& PlayedCard);
 
-private:
+    // ENEMY AI
+
+    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat")
+    bool PlayEnemyCard(const FCardData& CardToPlay);
+
+    void HandleEnemyHealthChanged(int32 NewHealth);
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy")
+    UEnemyAIComponent* EnemyAIComponent;
+
+    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat")
+    void DamageEnemy(int32 Damage);
+
+    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat")
     void SetCombatState(ECombatState NewState);
+
     void ProcessEnemyTurn();
+    void OnEnemyTurnComplete();
     void CheckWinConditions();
     void BroadcastBattlefieldUpdate(bool bPlayerSideChanged = true, const FBattlefieldCard* CardChanged = nullptr);
 
     // Enhanced damage targeting functions
     bool DamageFirstAvailablePlayerCard(int32 Damage);
+
     bool DamageFirstAvailableEnemyCard(int32 Damage);
+
+    // Unique ID management
+    static int32 NextUniqueCardID;
+
+    void UpdateBattlefieldIndices();
+
+    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat")
+    int32 FindBattlefieldIndexByUniqueID(int32 UniqueID, bool bIsPlayerSide) const;
 };

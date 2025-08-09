@@ -1,20 +1,16 @@
+// BattlefieldCardActor.h - Updated for Unique ID system
 #pragma once
 
 #include "CoreMinimal.h"
 #include "PaperCharacter.h"
-#include "CardDisplayTypes.h"   // contains FCardDisplayData and includes CardTypesHost which defines FCardData
+#include "CardTypesHost.h"
 #include "BattlefieldCardActor.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnBattlefieldCardSelected, int32, BattlefieldIndex, bool, bIsPlayerOwned);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBattlefieldCardDamaged, int32, NewHealth);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBattlefieldCardHealed, int32, NewHealth);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCardSelected, int32, UniqueID, bool, bIsPlayerOwned);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCardDamagedActor, int32, NewHealth);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCardHealedActor, int32, NewHealth);
 
-/**
- * Visual-only battlefield card actor (PaperCharacter).
- * Holds identifying info (index/side/card data) but NOT authoritative gameplay state.
- * CombatManager keeps gameplay state; this actor is for visuals & selection.
- */
-UCLASS()
+UCLASS(BlueprintType, Blueprintable)
 class KEVESCARDKIT_API ABattlefieldCardActor : public APaperCharacter
 {
     GENERATED_BODY()
@@ -22,69 +18,77 @@ class KEVESCARDKIT_API ABattlefieldCardActor : public APaperCharacter
 public:
     ABattlefieldCardActor();
 
-    /** Broadcast when this card takes damage */
-    UPROPERTY(BlueprintAssignable, Category = "Battlefield|Events")
-    FOnBattlefieldCardDamaged OnDamaged;
-
-    /** Broadcast when this card is healed */
-    UPROPERTY(BlueprintAssignable, Category = "Battlefield|Events")
-    FOnBattlefieldCardHealed OnHealed;
-
-    /** Index in CombatManager's battlefield array (keeps in sync with gameplay array) */
-    UPROPERTY(BlueprintReadOnly, Category = "Battlefield")
-    int32 BattlefieldIndex = -1;
-
-    /** True if this actor belongs to player side */
-    UPROPERTY(BlueprintReadOnly, Category = "Battlefield")
-    bool bIsPlayerOwned = false;
-
-    /** Card data used for visuals (non-authoritative) */
-    UPROPERTY(BlueprintReadOnly, Category = "Battlefield")
-    FCardData CardData;
-
-    /** Optional pointer to the CombatManager that spawned this actor (not required) */
-    UPROPERTY(BlueprintReadOnly, Category = "Battlefield")
-    AActor* OwningCombatManager = nullptr;
-
-    /** Delegate broadcast when the actor is selected (clicked) */
-    UPROPERTY(BlueprintAssignable, Category = "Battlefield")
-    FOnBattlefieldCardSelected OnSelected;
-
-    /** Initialize actor after spawn (set index/side/card, optional manager pointer) */
-    UFUNCTION(BlueprintCallable, Category = "Battlefield")
-    void InitializeBattlefieldCard(const FCardData& InCardData, int32 InIndex, bool bOwnedByPlayer, AActor* InCombatManager = nullptr);
-
-    /** Called by PC or by engine when actor is clicked (exposed for BP) */
-    UFUNCTION(BlueprintCallable, Category = "Battlefield")
-    void OnSelectedByPlayer();
-
-    /** Update index if manager removes/compacts array (keeps actor index in sync) */
-    UFUNCTION(BlueprintCallable, Category = "Battlefield")
-    void SetBattlefieldIndex(int32 NewIndex);
-
-    /** Called by CombatManager when this card’s health changes due to damage */
-    UFUNCTION(BlueprintCallable, Category = "Battlefield|Gameplay")
-    void HandleDamaged(int32 DamageAmount);
-
-    /** Called by CombatManager when this card’s health changes due to healing */
-    UFUNCTION(BlueprintCallable, Category = "Battlefield|Gameplay")
-    void HandleHealed(int32 NewHealth);
-
-    /** Play hit/death animations in BP */
-    UFUNCTION(BlueprintImplementableEvent, Category = "Battlefield|VFX")
-    void PlayHitAnimation();
-
-    UFUNCTION(BlueprintImplementableEvent, Category = "Battlefield|VFX")
-    void PlayDeathAnimation();
-
-    /** Optional event BPs can use to set sprite/flipbook/text on spawn */
-    UFUNCTION(BlueprintImplementableEvent, Category = "Battlefield|VFX")
-    void OnSpawnedVisuals();
-
 protected:
     virtual void BeginPlay() override;
 
-    /** Route clicks (player controller must have "Enable Click Events" set) */
-    virtual void NotifyActorOnClicked(FKey ButtonPressed) override;
-};
+public:
+    // === CARD DATA ===
+    UPROPERTY(BlueprintReadOnly, Category = "Card Data")
+    FCardData CardData;
 
+    // NEW: Use Unique ID instead of array index
+    UPROPERTY(BlueprintReadOnly, Category = "Card Data")
+    int32 UniqueID = -1;
+
+    // Array index (for reference, but not used for targeting)
+    UPROPERTY(BlueprintReadOnly, Category = "Card Data")
+    int32 BattlefieldIndex = -1;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Card Data")
+    bool bIsPlayerOwned = true;
+
+    UPROPERTY(BlueprintReadWrite, Category = "Card Data")
+    AActor* OwningCombatManager = nullptr;
+
+    // === EVENTS ===
+    UPROPERTY(BlueprintAssignable, Category = "Card Events")
+    FOnCardSelected OnSelected;
+
+    UPROPERTY(BlueprintAssignable, Category = "Card Events")
+    FOnCardDamagedActor OnDamaged;
+
+    UPROPERTY(BlueprintAssignable, Category = "Card Events")
+    FOnCardHealedActor OnHealed;
+
+    // === INITIALIZATION ===
+    UFUNCTION(BlueprintCallable, Category = "Battlefield Card")
+    void InitializeBattlefieldCard(const FCardData& InCardData, int32 InUniqueID, int32 InIndex, bool bOwnedByPlayer, AActor* InCombatManager = nullptr);
+
+    // === INTERACTION ===
+    UFUNCTION(BlueprintCallable, Category = "Battlefield Card")
+    void OnSelectedByPlayer();
+
+    // === DAMAGE HANDLING ===
+    UFUNCTION(BlueprintCallable, Category = "Battlefield Card")
+    void HandleDamaged(int32 DamageAmount);
+
+    UFUNCTION(BlueprintCallable, Category = "Battlefield Card")
+    void HandleHealed(int32 NewHealth);
+
+    // === UTILITY ===
+    UFUNCTION(BlueprintPure, Category = "Battlefield Card")
+    int32 GetUniqueID() const { return UniqueID; }
+
+    UFUNCTION(BlueprintCallable, Category = "Battlefield Card")
+    void UpdateBattlefieldIndex(int32 NewIndex);
+
+    // === BLUEPRINT EVENTS ===
+    UFUNCTION(BlueprintImplementableEvent, Category = "Battlefield Card")
+    void OnSpawnedVisuals();
+
+    UFUNCTION(BlueprintImplementableEvent, Category = "Battlefield Card")
+    void PlayHitAnimation();
+
+    UFUNCTION(BlueprintImplementableEvent, Category = "Battlefield Card")
+    void PlayDeathAnimation();
+
+    UFUNCTION(BlueprintImplementableEvent, Category = "Battlefield Card")
+    void OnHealthChanged(int32 NewHealth, int32 MaxHealth);
+
+protected:
+    virtual void NotifyActorOnClicked(FKey ButtonPressed = EKeys::LeftMouseButton) override;
+
+    // Event handler for damage by UniqueID
+    UFUNCTION()
+    void OnCardDamagedByUniqueID(int32 DamagedUniqueID, int32 DamageAmount);
+};
