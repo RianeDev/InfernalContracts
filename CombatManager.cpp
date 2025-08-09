@@ -52,6 +52,10 @@ void ACombatManager::StartCombat(const FEnemyData& Enemy, const TArray<int32>& P
     // Set up enemy
     CurrentEnemy = Enemy;
 
+    // Clear battlefields
+    PlayerBattlefield.Empty();
+    EnemyBattlefield.Empty();
+
     // Ensure we have an existing CombatUI
     if (!CombatUI)
     {
@@ -73,7 +77,7 @@ void ACombatManager::StartCombat(const FEnemyData& Enemy, const TArray<int32>& P
     // Set up player deck and draw starting hand (now UI is already listening if it exists)
     HandManager->SetPlayerDeck(PlayerDeckIDs);
     HandManager->DrawStartingHand();
-    
+
     // Set up cross-references between managers
     HandManager->SetCombatManager(this);
 
@@ -103,6 +107,10 @@ void ACombatManager::EndCombat(bool bPlayerWon)
 {
     SetCombatState(bPlayerWon ? ECombatState::Victory : ECombatState::Defeat);
 
+    // Clean up battlefields
+    PlayerBattlefield.Empty();
+    EnemyBattlefield.Empty();
+
     // Clean up UI
     if (CombatUI)
     {
@@ -130,7 +138,7 @@ void ACombatManager::EndPlayerTurn()
     if (HandManager)
     {
         HandManager->ClearHand();
-        
+
         // Check if deck has cards before shuffling and drawing
         if (HandManager->GetDeckSize() > 0)
         {
@@ -154,20 +162,43 @@ void ACombatManager::EndPlayerTurn()
     GetWorld()->GetTimerManager().SetTimer(EnemyTurnTimer, this, &ACombatManager::ProcessEnemyTurn, 1.5f, false);
 }
 
+// Enhanced damage function - targets battlefield cards first
 void ACombatManager::DamagePlayer(int32 Damage)
 {
-    // In your game, damage goes to the Player Health, not a "player health"
+    if (Damage <= 0) return;
+
+    UE_LOG(LogTemp, Log, TEXT("[CombatManager] Attempting to damage player for %d"), Damage);
+
+    // First, try to damage a player's card with health
+    if (DamageFirstAvailablePlayerCard(Damage))
+    {
+        UE_LOG(LogTemp, Log, TEXT("[CombatManager] Damage applied to player's battlefield card"));
+        return;
+    }
+
+    // If no cards available, damage player directly
     DamagePlayerHealth(Damage);
+    UE_LOG(LogTemp, Log, TEXT("[CombatManager] No player cards available - damage applied to player health"));
 }
 
 void ACombatManager::DamageEnemy(int32 Damage)
 {
     if (Damage <= 0) return;
 
+    UE_LOG(LogTemp, Log, TEXT("[CombatManager] Attempting to damage enemy for %d"), Damage);
+
+    // First, try to damage an enemy's card with health
+    if (DamageFirstAvailableEnemyCard(Damage))
+    {
+        UE_LOG(LogTemp, Log, TEXT("[CombatManager] Damage applied to enemy's battlefield card"));
+        return;
+    }
+
+    // If no cards available, damage enemy directly
     CurrentEnemy.Health = FMath::Max(0, CurrentEnemy.Health - Damage);
     OnHealthChanged.Broadcast(false, CurrentEnemy.Health); // false = is enemy
 
-    UE_LOG(LogTemp, Log, TEXT("[CombatManager] %s takes %d damage, health now %d"),
+    UE_LOG(LogTemp, Log, TEXT("[CombatManager] No enemy cards available - %s takes %d damage, health now %d"),
         *CurrentEnemy.Name.ToString(), Damage, CurrentEnemy.Health);
 
     CheckWinConditions();
@@ -213,6 +244,136 @@ void ACombatManager::SpendEnergy(int32 Cost)
     UE_LOG(LogTemp, Log, TEXT("[CombatManager] Player spends %d energy, %d remaining"), Cost, CurrentEnergy);
 }
 
+// Battlefield management functions
+void ACombatManager::SummonCreature(const FCardData& CreatureCard, bool bIsPlayerOwned)
+{
+    if (CreatureCard.CardType != ECardType::Creature && CreatureCard.CardType != ECardType::Champion)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[CombatManager] Cannot summon non-creature card: %s"), *CreatureCard.Name.ToString());
+        return;
+    }
+
+    FBattlefieldCard BattlefieldCard(CreatureCard, bIsPlayerOwned);
+
+    int32 NewIndex = INDEX_NONE;
+    if (bIsPlayerOwned)
+    {
+        PlayerBattlefield.Add(BattlefieldCard);
+        NewIndex = PlayerBattlefield.Num() - 1;
+
+        UE_LOG(LogTemp, Log, TEXT("[CombatManager] Player summoned %s (%d ATK/%d HP) at index %d"),
+            *CreatureCard.Name.ToString(), CreatureCard.Attack, CreatureCard.Health, NewIndex);
+    }
+    else
+    {
+        EnemyBattlefield.Add(BattlefieldCard);
+        NewIndex = EnemyBattlefield.Num() - 1;
+
+        UE_LOG(LogTemp, Log, TEXT("[CombatManager] Enemy summoned %s (%d ATK/%d HP) at index %d"),
+            *CreatureCard.Name.ToString(), CreatureCard.Attack, CreatureCard.Health, NewIndex);
+    }
+
+    // Fire summon event for Blueprints
+    OnCreatureSummoned.Broadcast(BattlefieldCard, NewIndex, bIsPlayerOwned);
+}
+
+void ACombatManager::RemoveCardFromBattlefield(int32 BattlefieldIndex, bool bIsPlayerSide)
+{
+    TArray<FBattlefieldCard>& Battlefield = bIsPlayerSide ? PlayerBattlefield : EnemyBattlefield;
+
+    if (!Battlefield.IsValidIndex(BattlefieldIndex))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[CombatManager] Invalid battlefield index: %d"), BattlefieldIndex);
+        return;
+    }
+
+    Battlefield.RemoveAt(BattlefieldIndex);
+
+    UE_LOG(LogTemp, Log, TEXT("[CombatManager] Removed card at index %d from %s battlefield"),
+        BattlefieldIndex, bIsPlayerSide ? TEXT("player") : TEXT("enemy"));
+
+    // Fire remove event for Blueprints
+    OnCreatureRemoved.Broadcast(BattlefieldIndex, bIsPlayerSide);
+}
+
+
+bool ACombatManager::DamageSpecificBattlefieldCard(int32 BattlefieldIndex, bool bIsPlayerSide, int32 Damage)
+{
+    TArray<FBattlefieldCard>& Battlefield = bIsPlayerSide ? PlayerBattlefield : EnemyBattlefield;
+
+    if (!Battlefield.IsValidIndex(BattlefieldIndex) || Damage <= 0)
+    {
+        return false;
+    }
+
+    FBattlefieldCard& Card = Battlefield[BattlefieldIndex];
+    Card.CurrentHealth = FMath::Max(0, Card.CurrentHealth - Damage);
+
+    UE_LOG(LogTemp, Log, TEXT("[CombatManager] %s takes %d damage, health now %d"),
+        *Card.CardData.Name.ToString(), Damage, Card.CurrentHealth);
+
+    // Remove card if health reaches 0
+    if (Card.CurrentHealth <= 0)
+    {
+        UE_LOG(LogTemp, Log, TEXT("[CombatManager] %s destroyed"), *Card.CardData.Name.ToString());
+        RemoveCardFromBattlefield(BattlefieldIndex, bIsPlayerSide);
+    }
+
+    OnCardDamaged.Broadcast(BattlefieldIndex, Damage, bIsPlayerSide);
+
+
+    return true;
+}
+
+bool ACombatManager::HasPlayerCardsWithHealth() const
+{
+    for (const FBattlefieldCard& Card : PlayerBattlefield)
+    {
+        if (Card.CurrentHealth > 0)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool ACombatManager::HasEnemyCardsWithHealth() const
+{
+    for (const FBattlefieldCard& Card : EnemyBattlefield)
+    {
+        if (Card.CurrentHealth > 0)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Private helper functions for damage targeting
+bool ACombatManager::DamageFirstAvailablePlayerCard(int32 Damage)
+{
+    for (int32 i = 0; i < PlayerBattlefield.Num(); i++)
+    {
+        if (PlayerBattlefield[i].CurrentHealth > 0)
+        {
+            return DamageSpecificBattlefieldCard(i, true, Damage);
+        }
+    }
+    return false; // No cards with health found
+}
+
+bool ACombatManager::DamageFirstAvailableEnemyCard(int32 Damage)
+{
+    for (int32 i = 0; i < EnemyBattlefield.Num(); i++)
+    {
+        if (EnemyBattlefield[i].CurrentHealth > 0)
+        {
+            return DamageSpecificBattlefieldCard(i, false, Damage);
+        }
+    }
+    return false; // No cards with health found
+}
+
 void ACombatManager::SetCombatState(ECombatState NewState)
 {
     if (CurrentState == NewState) return;
@@ -235,7 +396,7 @@ void ACombatManager::ProcessEnemyTurn()
 
     // Simple AI: Enemy attacks Player Health or creatures
     int32 EnemyDamage = FMath::RandRange(10, 20);
-    DamagePlayerHealth(EnemyDamage);
+    DamagePlayer(EnemyDamage);
 
     // Check if combat should end
     CheckWinConditions();
@@ -269,10 +430,11 @@ void ACombatManager::OnCardPlayed(const FCardData& PlayedCard)
     SpendEnergy(PlayedCard.Cost);
 
     // Apply card effects based on type
-    if (PlayedCard.CardType == ECardType::Creature)
+    if (PlayedCard.CardType == ECardType::Creature || PlayedCard.CardType == ECardType::Champion)
     {
-        // Creatures go to the battlefield (you'll need to implement battlefield management)
-        UE_LOG(LogTemp, Log, TEXT("[CombatManager] Creature '%s' summoned to battlefield"), *PlayedCard.Name.ToString());
+        // Creatures and Champions go to the battlefield
+        UE_LOG(LogTemp, Log, TEXT("[CombatManager] Summoning creature '%s'"), *PlayedCard.Name.ToString());
+        SummonCreature(PlayedCard, true);
     }
     else if (PlayedCard.CardType == ECardType::Spell)
     {

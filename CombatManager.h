@@ -10,6 +10,41 @@
 class AHandManager;
 class UCombatUIWidget;
 
+// Structure to represent a card on the battlefield
+USTRUCT(BlueprintType)
+struct FBattlefieldCard
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FCardData CardData;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int32 CurrentHealth = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int32 CurrentAttack = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    bool bIsPlayerOwned = true;
+
+    FBattlefieldCard()
+    {
+        CardData = FCardData();
+        CurrentHealth = 0;
+        CurrentAttack = 0;
+        bIsPlayerOwned = true;
+    }
+
+    FBattlefieldCard(const FCardData& InCardData, bool bPlayerOwned)
+    {
+        CardData = InCardData;
+        CurrentHealth = InCardData.Health;
+        CurrentAttack = InCardData.Attack;
+        bIsPlayerOwned = bPlayerOwned;
+    }
+};
+
 USTRUCT(BlueprintType)
 struct FEnemyData
 {
@@ -36,6 +71,10 @@ struct FEnemyData
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCombatStateChanged, ECombatState, NewState);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthChanged, bool, bIsPlayer, int32, NewHealth);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnCreatureSummoned, const FBattlefieldCard&, Card, int32, Index, bool, bPlayerOwned);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCreatureRemoved, int32, Index, bool, bPlayerOwned);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnCardDamaged, int32, BattlefieldIndex, int32, DamageAmount, bool, bIsPlayerSide);
+
 
 UCLASS(BlueprintType, Blueprintable)
 class KEVESCARDKIT_API ACombatManager : public AActor
@@ -74,6 +113,19 @@ public:
     UPROPERTY(BlueprintReadOnly, Category = "Combat")
     FEnemyData CurrentEnemy;
 
+    // Battlefield - Cards currently in play
+    UPROPERTY(BlueprintReadOnly, Category = "Combat")
+    TArray<FBattlefieldCard> PlayerBattlefield;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Combat")
+    TArray<FBattlefieldCard> EnemyBattlefield;
+
+    UPROPERTY(BlueprintReadWrite, Category = "Combat")
+    FBattlefieldCard CardChanged;
+
+    UPROPERTY(BlueprintAssignable, Category = "Combat")
+    FOnCardDamaged OnCardDamaged;
+
     // References
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "References")
     class AHandManager* HandManager;
@@ -89,6 +141,13 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "Events")
     FOnHealthChanged OnHealthChanged;
 
+
+    UPROPERTY(BlueprintAssignable, Category = "Combat|Events")
+    FOnCreatureSummoned OnCreatureSummoned;
+
+    UPROPERTY(BlueprintAssignable, Category = "Combat|Events")
+    FOnCreatureRemoved OnCreatureRemoved;
+
     // ==== BLUEPRINT CALLABLE FUNCTIONS FOR DEVELOPERS ====
 
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat")
@@ -103,6 +162,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat", CallInEditor)
     void EndPlayerTurn();
 
+    // Enhanced damage functions that target battlefield cards first
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat", CallInEditor)
     void DamagePlayer(int32 Damage);
 
@@ -123,6 +183,16 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat", CallInEditor)
     void SpendEnergy(int32 Cost);
+
+    // Battlefield management
+    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat", CallInEditor)
+    void SummonCreature(const FCardData& CreatureCard, bool bIsPlayerOwned = true);
+
+    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat", CallInEditor)
+    void RemoveCardFromBattlefield(int32 BattlefieldIndex, bool bIsPlayerSide = true);
+
+    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat", CallInEditor)
+    bool DamageSpecificBattlefieldCard(int32 BattlefieldIndex, bool bIsPlayerSide, int32 Damage);
 
     // Utility Functions
     UFUNCTION(BlueprintPure, Category = "Infernal Contracts|Combat")
@@ -152,11 +222,28 @@ public:
     UFUNCTION(BlueprintPure, Category = "Infernal Contracts|Combat")
     float GetEnemyHealthPercent() const { return CurrentEnemy.MaxHealth > 0 ? (float)CurrentEnemy.Health / CurrentEnemy.MaxHealth : 0.0f; }
 
+    UFUNCTION(BlueprintPure, Category = "Infernal Contracts|Combat")
+    bool HasPlayerCardsWithHealth() const;
+
+    UFUNCTION(BlueprintPure, Category = "Infernal Contracts|Combat")
+    bool HasEnemyCardsWithHealth() const;
+
+    UFUNCTION(BlueprintPure, Category = "Infernal Contracts|Combat")
+    TArray<FBattlefieldCard> GetPlayerBattlefield() const { return PlayerBattlefield; }
+
+    UFUNCTION(BlueprintPure, Category = "Infernal Contracts|Combat")
+    TArray<FBattlefieldCard> GetEnemyBattlefield() const { return EnemyBattlefield; }
+
+    UFUNCTION(BlueprintCallable, Category = "Infernal Contracts|Combat")
+    void OnCardPlayed(const FCardData& PlayedCard);
+
 private:
     void SetCombatState(ECombatState NewState);
     void ProcessEnemyTurn();
     void CheckWinConditions();
+    void BroadcastBattlefieldUpdate(bool bPlayerSideChanged = true, const FBattlefieldCard* CardChanged = nullptr);
 
-    UFUNCTION()
-    void OnCardPlayed(const FCardData& PlayedCard);
+    // Enhanced damage targeting functions
+    bool DamageFirstAvailablePlayerCard(int32 Damage);
+    bool DamageFirstAvailableEnemyCard(int32 Damage);
 };
